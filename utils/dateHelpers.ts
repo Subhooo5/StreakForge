@@ -1,8 +1,8 @@
 export interface TimeOfDayMetrics {
-  morning: number; // 6 AM - 12 PM
-  afternoon: number; // 12 PM - 6 PM
-  evening: number; // 6 PM - 12 AM
-  night: number; // 12 AM - 6 AM
+  morning: number;
+  afternoon: number;
+  evening: number;
+  night: number;
 }
 
 export function processCommitTimestamps(commitDates: string[] | Date[]): TimeOfDayMetrics {

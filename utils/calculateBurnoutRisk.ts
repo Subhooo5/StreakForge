@@ -1,47 +1,26 @@
-/**
- * calculateBurnoutRisk — Client-side utility that derives an overall
- * repository burnout-risk score (0–100) from a BurnoutReport object.
- *
- * Weighted scoring dimensions:
- *   Commit frequency decline  — 25 %
- *   Contributor concentration — 25 %
- *   Issue response delays     — 20 % (proxied via sustainabilityScore)
- *   PR backlog                — 15 % (proxied via dependencyRisk)
- *   Inactivity spikes         — 15 %
- */
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/** Minimal slice of ContributorMetric the calculator needs. */
 export interface ContributorSlice {
   commitShare: number;
   recentTrend: number[];
 }
 
-/** Minimal slice of InactivityAlert the calculator needs. */
 export interface InactivityAlertSlice {
   weeksSilent: number;
   severity: 'Medium' | 'High';
 }
 
-/** A single actionable recommendation produced by the calculator. */
 export interface BurnoutRecommendation {
-  icon: string; // lucide-react icon name key
+  icon: string;
   title: string;
   description: string;
 }
 
-/** The full result object returned by calculateBurnoutRisk. */
 export interface BurnoutRiskResult {
-  score: number; // 0–100
+  score: number;
   level: 'Low' | 'Moderate' | 'High';
   description: string;
   recommendations: BurnoutRecommendation[];
 }
 
-/** Input shape — mirrors the relevant fields of BurnoutReport. */
 export interface BurnoutRiskInput {
   sustainabilityScore: number;
   busFactor: number;
@@ -50,25 +29,12 @@ export interface BurnoutRiskInput {
   inactivityAlerts: InactivityAlertSlice[];
 }
 
-// ---------------------------------------------------------------------------
-// Weights
-// ---------------------------------------------------------------------------
-
 const WEIGHT_COMMIT_DECLINE = 0.25;
 const WEIGHT_CONCENTRATION = 0.25;
 const WEIGHT_ISSUE_DELAYS = 0.2;
 const WEIGHT_PR_BACKLOG = 0.15;
 const WEIGHT_INACTIVITY = 0.15;
 
-// ---------------------------------------------------------------------------
-// Dimension calculators — each returns a normalised 0–100 sub-score
-// ---------------------------------------------------------------------------
-
-/**
- * Measures average commit frequency decline across contributors.
- * Compares the last 3 weeks of each contributor's recentTrend to
- * the preceding weeks. A steeper decline → higher sub-score.
- */
 export function measureCommitDecline(contributors: ContributorSlice[]): number {
   if (contributors.length === 0) return 0;
 
@@ -87,7 +53,6 @@ export function measureCommitDecline(contributors: ContributorSlice[]): number {
       preceding.length > 0 ? preceding.reduce((a, b) => a + b, 0) / preceding.length : 0;
 
     if (avgPreceding > 0) {
-      // Ratio of decline: 1 means total halt, 0 means stable, negative means growth
       const decline = Math.max(0, 1 - avgRecent / avgPreceding);
       totalDeclineRatio += decline;
       counted++;
@@ -95,33 +60,19 @@ export function measureCommitDecline(contributors: ContributorSlice[]): number {
   }
 
   if (counted === 0) return 0;
-  // Average decline ratio → scale to 0–100
   return Math.min(100, (totalDeclineRatio / counted) * 100);
 }
 
-/**
- * Measures contributor concentration.
- * Top contributor's commitShare directly maps to risk.
- */
 export function measureConcentration(contributors: ContributorSlice[]): number {
   if (contributors.length === 0) return 0;
   const topShare = Math.max(...contributors.map((c) => c.commitShare));
-  // 100% share → 100 risk, < 20% share → ≈ 0 risk
   return Math.min(100, Math.max(0, topShare));
 }
 
-/**
- * Proxies issue response delay risk from the sustainability score.
- * A low sustainability score implies slower responses / poorer health.
- */
 export function measureIssueDelays(sustainabilityScore: number): number {
-  // Inverse: 100 sustainability → 0 risk, 0 sustainability → 100 risk
   return Math.min(100, Math.max(0, 100 - sustainabilityScore));
 }
 
-/**
- * Proxies PR backlog risk from dependencyRisk level.
- */
 export function measurePRBacklog(dependencyRisk: 'Low' | 'Medium' | 'High'): number {
   switch (dependencyRisk) {
     case 'High':
@@ -133,9 +84,6 @@ export function measurePRBacklog(dependencyRisk: 'Low' | 'Medium' | 'High'): num
   }
 }
 
-/**
- * Measures inactivity spikes from the inactivity alerts list.
- */
 export function measureInactivity(alerts: InactivityAlertSlice[]): number {
   if (alerts.length === 0) return 0;
 
@@ -146,10 +94,6 @@ export function measureInactivity(alerts: InactivityAlertSlice[]): number {
   }
   return Math.min(100, penalty);
 }
-
-// ---------------------------------------------------------------------------
-// Recommendation engine
-// ---------------------------------------------------------------------------
 
 function generateRecommendations(
   commitDecline: number,
@@ -216,7 +160,6 @@ function generateRecommendations(
     });
   }
 
-  // Always ensure at least one recommendation
   if (recs.length === 0) {
     recs.push({
       icon: 'CheckCircle',
@@ -228,10 +171,6 @@ function generateRecommendations(
 
   return recs;
 }
-
-// ---------------------------------------------------------------------------
-// Main calculator
-// ---------------------------------------------------------------------------
 
 export function calculateBurnoutRisk(input: BurnoutRiskInput): BurnoutRiskResult {
   const commitDecline = measureCommitDecline(input.contributors);

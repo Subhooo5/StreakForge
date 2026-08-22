@@ -1,5 +1,3 @@
-// types/dashboard.ts
-
 import type { ContributionCalendar, GraphNode, GraphLink } from './index';
 
 export interface UserProfile {
@@ -11,11 +9,11 @@ export interface UserProfile {
   location: string;
   joinedDate: string;
   developerScore: number;
-  type?: 'User' | 'Organization'; // Added to distinguish orgs from standard users
+  type?: 'User' | 'Organization';
   stats: {
     repositories: number;
     followers: number;
-    following: number; // For Organizations, this acts as the "members" count
+    following: number;
     stars: number;
   };
 }
@@ -23,9 +21,8 @@ export interface UserProfile {
 export interface ActivityData {
   date: string;
   count: number;
-  intensity: 0 | 1 | 2 | 3 | 4; // 0 = no activity, 4 = highest
+  intensity: 0 | 1 | 2 | 3 | 4;
 
-  // Added for LoC (Lines of Code) Mode tracking
   locAdditions?: number;
   locDeletions?: number;
 }
@@ -58,7 +55,7 @@ export interface Achievement {
   type: 'contributions' | 'streak' | 'behavior';
   threshold: number;
   currentValue: number;
-  progress: number; // 0–100
+  progress: number;
 }
 
 export interface HallOfFameAward {
@@ -78,7 +75,7 @@ export interface HallOfFameAward {
 }
 
 export interface CommitClockData {
-  day: string; // 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat'
+  day: string;
   commits: number;
 }
 
@@ -87,10 +84,6 @@ export interface DashboardExportData {
   languages: LanguageData[];
   activity?: ActivityData[];
 }
-
-/* ==========================================================================
- * NEW EPIC FEATURE TYPES (Wrapped & Org Data)
- * ========================================================================== */
 
 export interface WrappedStats {
   totalContributions: number;
@@ -120,10 +113,6 @@ export interface RepoActivityInfo {
   pushedAt: string | null;
 }
 
-/* ==========================================================================
- * PRODUCTION DEPLOYMENTS FEATURE
- * ========================================================================== */
-
 export type WorkflowStatus = 'success' | 'failure' | 'in_progress' | 'unknown';
 
 export interface DeploymentData {
@@ -131,9 +120,9 @@ export interface DeploymentData {
   repoUrl: string;
   liveUrl: string | null;
   status: WorkflowStatus;
-  deployedAt: string | null; // ISO timestamp of the deployment
-  environment: string; // e.g. "production"
-  workflowName: string | null; // e.g. "Vercel Production Deployment"
+  deployedAt: string | null;
+  environment: string;
+  workflowName: string | null;
 }
 
 export interface DashboardData {

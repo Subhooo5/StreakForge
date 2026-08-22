@@ -1,24 +1,9 @@
 interface LoadingPanelProps {
-  /** What is being loaded, e.g. "Analysing vercel/next.js". */
   title: string;
-  /** One line on what is actually being fetched. */
   description: string;
-  /**
-   * Reserves the panel's height so the surrounding layout does not move when
-   * the panel is replaced by loaded content. Defaults to the burnout page's
-   * original panel height.
-   */
   minHeight?: number;
 }
 
-/**
- * The shared "we are fetching this" panel.
- *
- * Extracted from the Burnout Radar page so Compare and the dashboard tabs use
- * the same spinner, container sizing and typography rather than each inventing
- * their own. `minHeight` is part of the contract: a loading state that reserves
- * its own height is what keeps a page from jumping when data lands.
- */
 export default function LoadingPanel({ title, description, minHeight = 255 }: LoadingPanelProps) {
   return (
     <div

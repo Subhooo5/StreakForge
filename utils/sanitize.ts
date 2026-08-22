@@ -1,7 +1,3 @@
-/**
- * Recursively scans and deletes keys starting with $ from input objects.
- * Prevents MongoDB query operator injection by stripping out MongoDB operators.
- */
 export function sanitizeMongoPayload<T>(input: T): T {
   if (input === null || typeof input !== 'object') {
     return input;

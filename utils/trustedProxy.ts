@@ -8,13 +8,11 @@ const PRIVATE_IPV4_RANGES = [
   '169.254.0.0/16',
 ];
 
-// Pre-parsed CIDR entry with cached mask and range integer
 interface ParsedCidr {
   rangeInt: number;
   mask: number;
 }
 
-// Pre-processed config split by entry type for O(1) and O(m) lookups
 interface ParsedProxyConfig {
   wildcard: boolean;
   exactSet: Set<string>;
@@ -23,25 +21,17 @@ interface ParsedProxyConfig {
   trustPrivateRanges: boolean;
 }
 
-// Cached parsed private ranges — computed once at module load
 const PARSED_PRIVATE_RANGES: ParsedCidr[] = PRIVATE_IPV4_RANGES.map(parseCidr).filter(
   Boolean
 ) as ParsedCidr[];
 
-// Module-level memoization cache for loadTrustedProxyConfig
 let cachedConfig: TrustedProxyConfig | null = null;
 let cachedEnvKey: string | null = null;
 
-/**
- * Converts an IPv4 address to its 32-bit integer representation.
- */
 export function ip4ToInt(ip: string): number {
   return ip.split('.').reduce((int, oct) => (int << 8) + parseInt(oct, 10), 0) >>> 0;
 }
 
-/**
- * Parses a CIDR string into a cached mask and range integer.
- */
 function parseCidr(cidr: string): ParsedCidr | null {
   try {
     const [range, bitsStr] = cidr.split('/');
@@ -60,9 +50,6 @@ export interface ParsedCidr6 {
   mask: bigint;
 }
 
-/**
- * Converts an IPv6 address to its 128-bit BigInt representation.
- */
 export function ip6ToBigInt(ip: string): bigint | null {
   const cleanIp = ip.split('/')[0].trim();
   if (!cleanIp.includes(':')) return null;
@@ -101,9 +88,6 @@ export function ip6ToBigInt(ip: string): bigint | null {
   return intValue;
 }
 
-/**
- * Parses an IPv6 CIDR string into a cached mask and range BigInt.
- */
 export function parseCidr6(cidr: string): ParsedCidr6 | null {
   try {
     const [range, bitsStr] = cidr.split('/');
@@ -122,9 +106,6 @@ export function parseCidr6(cidr: string): ParsedCidr6 | null {
   }
 }
 
-/**
- * Checks if an IPv4 address falls within a given CIDR block.
- */
 export function isIPv4InCidr(ip: string, cidr: string): boolean {
   try {
     const [range, bitsStr] = cidr.split('/');
@@ -140,9 +121,6 @@ export function isIPv4InCidr(ip: string, cidr: string): boolean {
   }
 }
 
-/**
- * Check if the given string is a valid IPv4 address.
- */
 export function isIPv4(ip: string): boolean {
   const parts = ip.split('.');
   if (parts.length !== 4) return false;
@@ -152,10 +130,6 @@ export function isIPv4(ip: string): boolean {
   });
 }
 
-/**
- * Pre-processes a TrustedProxyConfig into a ParsedProxyConfig
- * separating wildcards, exact IPs, and CIDR ranges for faster lookup.
- */
 const parsedProxyConfigCache = new WeakMap<TrustedProxyConfig, ParsedProxyConfig>();
 export function buildProxyConfig(config: TrustedProxyConfig): ParsedProxyConfig {
   const exactSet = new Set<string>();
@@ -188,10 +162,6 @@ export function buildProxyConfig(config: TrustedProxyConfig): ParsedProxyConfig 
   };
 }
 
-/**
- * Checks if an IP is in the trusted proxy configuration list or private ranges.
- * Accepts raw TrustedProxyConfig — builds parsed config internally for performance.
- */
 export function isTrustedProxy(ip: string, config: TrustedProxyConfig): boolean {
   const sanitizedIp = ip.trim();
   let parsed = parsedProxyConfigCache.get(config);
@@ -236,14 +206,6 @@ export function isTrustedProxy(ip: string, config: TrustedProxyConfig): boolean 
   return false;
 }
 
-/**
- * Loads trusted proxy configuration from environment variables.
- * Memoized — re-parses only when env vars change.
- *
- * TRUSTED_PROXIES is optional. When running on Vercel (VERCEL=1 is always set),
- * the network layer is automatically trusted — Vercel controls the load balancer
- * that appends the true client IP to x-forwarded-for, so it cannot be spoofed.
- */
 export function loadTrustedProxyConfig(): TrustedProxyConfig {
   const envProxies = process.env.TRUSTED_PROXIES ?? '';
   const vercelEnv = process.env.VERCEL ?? '';
@@ -263,9 +225,6 @@ export function loadTrustedProxyConfig(): TrustedProxyConfig {
     );
   }
 
-  // Auto-trust Vercel's network layer when no explicit TRUSTED_PROXIES are configured.
-  // Vercel (VERCEL=1) controls the load balancer that appends the real client IP to
-  // x-forwarded-for, so the header value cannot be spoofed by end users.
   if (vercelEnv && !trustedProxies.length) {
     trustedProxies.push('*');
   }
