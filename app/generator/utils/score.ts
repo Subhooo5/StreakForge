@@ -1,10 +1,6 @@
 import { activeSocials } from './readme';
 import type { GeneratorState } from '../types';
 
-/**
- * Anchor ids on the left-hand controls. The Quick Fixes buttons under the
- * README Health Breakdown scroll to these.
- */
 export const SECTION_IDS = {
   name: 'name-section',
   description: 'description-section',
@@ -25,7 +21,6 @@ export interface Facts {
   hasBadge: boolean;
 }
 
-/** Everything the score panels ask about the current state, computed once. */
 export function readFacts(state: GeneratorState): Facts {
   const techCount = state.techs.length;
   return {
@@ -56,10 +51,6 @@ export interface CompletionScore {
   suggestions: Suggestion[];
 }
 
-/**
- * Weighted completion score. Weights mirror how much each piece actually
- * improves a profile README: a stack and a bio matter more than a toggle.
- */
 export function computeCompletion(state: GeneratorState): CompletionScore {
   const f = readFacts(state);
 
@@ -152,7 +143,6 @@ export interface HealthItem {
   sectionId: string;
 }
 
-/** Flat pass/fail checklist behind the README Health Breakdown panel. */
 export function computeHealth(state: GeneratorState): {
   items: HealthItem[];
   percentage: number;
@@ -213,7 +203,6 @@ export function getGrade(score: number): Grade {
   return { label: 'Beginner', color: 'var(--info)' };
 }
 
-/** Up to four next steps, highest-impact first. */
 export function generateTips(state: GeneratorState): string[] {
   const f = readFacts(state);
   const tips: string[] = [];
@@ -241,7 +230,6 @@ export function generateTips(state: GeneratorState): string[] {
   return tips.slice(0, 4);
 }
 
-/** Single highest-impact suggestion + the score it would unlock. */
 export function topInsight(state: GeneratorState): { text: string; boost: number } | null {
   const f = readFacts(state);
   if (!f.hasEnoughTechs) return { text: 'List at least three technologies', boost: 25 };

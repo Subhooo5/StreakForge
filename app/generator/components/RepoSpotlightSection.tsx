@@ -2,7 +2,7 @@
 
 import CollapsibleSection from './CollapsibleSection';
 import { ExternalLink, FieldLabel, Spinner, StatusLine, ToggleRow, WARN_TRI } from './ui';
-import type { UserRepo, UserRepos } from '../data/useGithubProfile';
+import type { UserRepo, UserRepos } from '../hooks/useGithubProfile';
 
 interface RepoSpotlightSectionProps {
   open: boolean;
@@ -47,7 +47,6 @@ function formatUpdated(iso: string | null): string {
   return `Updated ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
 
-/** GitHub-styled card mirroring the SVG the README embed renders. */
 function RepoCard({ repo }: { repo: UserRepo }) {
   return (
     <div style={{ width: '100%', maxWidth: '450px', padding: '20px', border: '1px solid color-mix(in srgb,var(--accent) 30%,transparent)', borderRadius: '14px', background: 'rgba(255,255,255,.03)', color: '#e8ecf4' }}>
@@ -75,11 +74,6 @@ function RepoCard({ repo }: { repo: UserRepo }) {
   );
 }
 
-/**
- * Showcases one repository. The selector and the card are both driven by the
- * user's real public repositories (`/api/streak?...&view=spotlight&format=json`),
- * and the README embeds the SVG the same route renders.
- */
 export default function RepoSpotlightSection({ open, onToggle, username, show, onShowChange, repo, onRepoChange, repos, onReset }: RepoSpotlightSectionProps) {
   const trimmed = username.trim();
   const selected = repos.repos.find((r) => r.name === repo) ?? null;

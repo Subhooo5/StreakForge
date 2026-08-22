@@ -1,12 +1,5 @@
 'use client';
 
-// Data layer for the Generator page's GitHub lookups.
-//
-// Both hooks read the SAME single data route the badge itself is served from —
-// `/api/streak` — so every figure the page shows (streak, longest streak,
-// contributions, public repos, the repository list) is real, cached and
-// rate-limited by `lib/github`'s hot path. No mock or seeded values live here.
-
 import { useEffect, useState } from 'react';
 import { isValidGithubUsername } from '../utils/username';
 
@@ -42,11 +35,6 @@ const IDLE: GithubProfile = {
 
 const DEBOUNCE_MS = 500;
 
-/**
- * Verifies `username` against `/api/streak?...&format=json` and returns the
- * profile plus real streak stats. Empty input stays `idle`; a malformed handle
- * short-circuits to `invalid` without spending a request.
- */
 export function useGithubProfile(username: string, enabled = true): GithubProfile {
   const [state, setState] = useState<GithubProfile>(IDLE);
 
@@ -130,11 +118,6 @@ export interface UserRepos {
 
 const NO_REPOS: UserRepos = { status: 'idle', repos: [] };
 
-/**
- * Public repositories for `username`, newest-pushed first, from
- * `/api/streak?...&view=spotlight&format=json`. Powers the Repository
- * Spotlight selector and its live card.
- */
 export function useUserRepos(username: string, enabled = true): UserRepos {
   const [state, setState] = useState<UserRepos>(NO_REPOS);
 

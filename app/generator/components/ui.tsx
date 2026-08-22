@@ -3,12 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fallbackCopyToClipboard } from '@/utils/clipboard';
 
-// Shared building blocks for the Generator page's controls. Everything here
-// draws only on the design-system tokens in `app/globals.css` — no new colours,
-// no Tailwind utilities.
-
-// Reproduces the mockup's `style-hover="..."` behaviour with React hover state.
-// `base` styles stay verbatim; `hover` styles are merged on pointer-enter.
 type HoverProps = React.HTMLAttributes<HTMLElement> & {
   as?: React.ElementType;
   base?: React.CSSProperties;
@@ -30,7 +24,6 @@ export function Hover({ as = 'div', base, hover, children, ...rest }: HoverProps
   );
 }
 
-/** Small caps field label used above every input in the builder. */
 export function FieldLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div className="ui" style={{ fontSize: '11px', letterSpacing: '.1em', color: 'var(--soft)', textTransform: 'uppercase', fontWeight: 600, ...style }}>
@@ -39,7 +32,6 @@ export function FieldLabel({ children, style }: { children: React.ReactNode; sty
   );
 }
 
-/** The pill switch used by every "include in README" row. */
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} style={{ width: '48px', height: '28px', flex: 'none', borderRadius: '100px', background: on ? 'var(--accent)' : 'var(--line)', position: 'relative', transition: 'background .2s' }}>
@@ -48,7 +40,6 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
   );
 }
 
-/** Title + description on the left, switch on the right. */
 export function ToggleRow({ title, description, on, onChange, label }: { title: string; description: string; on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px' }}>
@@ -74,7 +65,6 @@ const CLEAR_ICON = (
   </svg>
 );
 
-/** Search-prefixed text input with an optional clear affordance. */
 export function SearchInput({ value, onChange, placeholder, maxLength, onClear, spinner, id }: { value: string; onChange: (v: string) => void; placeholder: string; maxLength?: number; onClear?: () => void; spinner?: boolean; id?: string }) {
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -109,7 +99,6 @@ export function Spinner({ size = 14 }: { size?: number }) {
   );
 }
 
-/** Equal-width segmented control (icon-style picker, placement picker, tabs). */
 export function Segmented<T extends string>({ options, value, onChange, uppercase }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void; uppercase?: boolean }) {
   return (
     <div className="ui" style={{ display: 'flex', gap: '4px', padding: '5px', border: '1px solid var(--line)', borderRadius: '13px', background: 'var(--surface2)' }}>
@@ -143,7 +132,6 @@ const CHECK_ICON = (
   </svg>
 );
 
-/** Copies `text`, flashing a tick for ~1.6s. Falls back to execCommand. */
 export function CopyButton({ text, label = 'Copy', floating }: { text: string; label?: string; floating?: boolean }) {
   const [done, setDone] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,7 +164,6 @@ export function CopyButton({ text, label = 'Copy', floating }: { text: string; l
   );
 }
 
-/** Dark scrollable code panel with a floating copy button. */
 export function CodeBlock({ code, maxHeight = '220px' }: { code: string; maxHeight?: string }) {
   return (
     <div style={{ position: 'relative', border: '1px solid var(--line2)', borderRadius: '14px', overflow: 'hidden', background: '#0c0e16' }}>
@@ -186,7 +173,6 @@ export function CodeBlock({ code, maxHeight = '220px' }: { code: string; maxHeig
   );
 }
 
-/** One-line status message under an input (verifying / found / error). */
 export function StatusLine({ tone, children }: { tone: 'good' | 'warn' | 'bad' | 'soft'; children: React.ReactNode }) {
   const color = tone === 'good' ? 'var(--good)' : tone === 'warn' ? 'var(--warn)' : tone === 'bad' ? 'var(--bad)' : 'var(--soft)';
   return (
@@ -216,7 +202,6 @@ export const EXTERNAL = (
   </svg>
 );
 
-/** Small "Full dashboard ↗" / "View repository ↗" link. */
 export function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Hover as="a" href={href} target="_blank" rel="noopener" base={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: 'var(--accent-ink)', transition: 'opacity .18s' }} hover={{ opacity: 0.75 }}>
@@ -226,7 +211,6 @@ export function ExternalLink({ href, children }: { href: string; children: React
   );
 }
 
-/** Dark stage panel every live preview sits on, matching the README preview. */
 export function PreviewStage({ children, minHeight = '140px', style }: { children: React.ReactNode; minHeight?: string; style?: React.CSSProperties }) {
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', border: '1px solid var(--line2)', borderRadius: '14px', background: '#0c0e16', minHeight, overflow: 'hidden', ...style }}>

@@ -14,7 +14,7 @@ import ReadmeHealthBreakdown from './components/ReadmeHealthBreakdown';
 import ReadmePreview from './components/ReadmePreview';
 import { FieldLabel, Hover, Segmented } from './components/ui';
 import { TECHS, TECHCATS, PLATS, PLATCATS, TECH_ICONS, SOCIAL_ICONS } from './data/generatorData';
-import { useGithubProfile, useUserRepos } from './data/useGithubProfile';
+import { useGithubProfile, useUserRepos } from './hooks/useGithubProfile';
 import { EMPTY_STATE, type GeneratorState, type TechIconDisplay } from './types';
 import { generateReadme, socialPlaceholder } from './utils/readme';
 import { computeCompletion, generateTips, getGrade } from './utils/score';
@@ -22,7 +22,6 @@ import type { ProfilePreset } from './data/presets';
 
 type OpenState = { name: boolean; desc: boolean; tech: boolean; social: boolean; badge: boolean; viz: boolean; spotlight: boolean };
 
-/** Maps a Quick Fixes anchor id back to the collapsible that owns it. */
 const SECTION_OPEN_KEY: Record<string, keyof OpenState> = {
   'name-section': 'name',
   'description-section': 'desc',
@@ -107,9 +106,6 @@ export default function GeneratorClient() {
   const [theme, toggleTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ONE source of truth. The README preview, the raw markdown, the completion
-  // score, the insights and the health breakdown are all derived from this on
-  // every render — none of them keep a copy, so they can never go stale.
   const [state, setState] = useState<GeneratorState>(EMPTY_STATE);
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
@@ -131,7 +127,6 @@ export default function GeneratorClient() {
   const dlRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const impRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Every control writes through here; a manual edit clears the preset chip. */
   const patch = useCallback((next: Partial<GeneratorState>) => {
     setState((s) => ({ ...s, ...next }));
     setActivePreset(null);
@@ -143,20 +138,15 @@ export default function GeneratorClient() {
     setOpen((o) => ({ ...o, name: true, desc: true, tech: true, badge: true }));
   }
 
-  // Mirror the handle into `?user=` (the standard param across every route).
-  // `state` stays the single source of truth — this only reflects it.
   useUrlMirror(
     'user',
     state.githubUsername,
     useCallback((v: string) => setState((s) => (s.githubUsername === v ? s : { ...s, githubUsername: v })), []),
   );
 
-  // Real GitHub data — one verified profile shared by the badge, the graphs and
-  // the spotlight, plus the repository list the spotlight selector needs.
   const profile = useGithubProfile(state.githubUsername);
   const repos = useUserRepos(state.githubUsername, state.showRepoSpotlight);
 
-  // Default the spotlight to the most recently pushed repo once repos land.
   useEffect(() => {
     if (repos.status !== 'ready' || repos.repos.length === 0) return;
     setState((s) => {
@@ -167,11 +157,6 @@ export default function GeneratorClient() {
 
   function toggleSection(k: keyof OpenState) { setOpen(o => ({ ...o, [k]: !o[k] })); }
 
-  /**
-   * Quick Fixes target: expand the section that owns the missing field, then
-   * scroll it into view. Opening first means the button lands on the actual
-   * input rather than a collapsed header.
-   */
   const jumpToSection = useCallback((sectionId: string) => {
     const key = SECTION_OPEN_KEY[sectionId];
     if (key) setOpen(o => ({ ...o, [key]: true }));
@@ -269,7 +254,6 @@ export default function GeneratorClient() {
 
     if (reduce) { draw(); cancelAnimationFrame(raf); } else { raf = requestAnimationFrame(draw); }
 
-    // initReveal — same landing animation as the Home/Compare pages.
     let io: IntersectionObserver | undefined;
     let revealTO: ReturnType<typeof setTimeout> | undefined;
     const root = rootRef.current;
@@ -309,8 +293,6 @@ export default function GeneratorClient() {
 
   useEffect(() => { readGridColorsRef.current?.(); }, [theme]);
 
-  // Derived on every render straight from `state` — the markdown the Markdown
-  // tab shows is byte-for-byte the file Copy and Download hand over.
   const md = generateReadme(state);
   const C = computeCompletion(state);
   const grade = getGrade(C.score);
@@ -338,7 +320,7 @@ export default function GeneratorClient() {
 
       <div style={{ position: 'relative', zIndex: 2 }}>
 
-        {/* TICKER */}
+        {}
         <div style={{ width: '100%', borderBottom: '1px solid var(--line2)', background: 'var(--surface)', backdropFilter: 'blur(10px)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', height: '34px', width: 'max-content', animation: 'sf-ticker 44s linear infinite' }}>
             {[0, 1].map(dup => (
@@ -355,7 +337,7 @@ export default function GeneratorClient() {
           </div>
         </div>
 
-        {/* NAV */}
+        {}
         <header style={{ position: 'sticky', top: 0, zIndex: 40 }}>
           <div style={{ background: 'var(--surface)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--line2)' }}>
             <nav style={{ maxWidth: '1240px', margin: '0 auto', padding: '14px clamp(16px,4vw,40px)', display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -394,7 +376,7 @@ export default function GeneratorClient() {
 
         <main style={{ maxWidth: '1320px', margin: '0 auto', padding: '0 clamp(16px,4vw,40px)' }}>
 
-          {/* A — HERO */}
+          {}
           <section style={{ textAlign: 'center', padding: 'clamp(48px,7vw,88px) 0 clamp(28px,4vw,44px)' }}>
             <div className="ui" data-reveal style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', padding: '7px 16px', border: '1px solid color-mix(in srgb,var(--accent) 35%,var(--line))', borderRadius: '100px', background: 'color-mix(in srgb,var(--accent) 8%,var(--surface))', fontSize: '12px', letterSpacing: '.12em', color: 'var(--accent-ink)', textTransform: 'uppercase', fontWeight: 600 }}>
               <svg width={13} height={13} viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.2 9.9 5.9 15 6.3l-3.9 3.3 1.2 5L8 12.1 3.7 14.6l1.2-5L1 6.3l5.1-.4L8 1.2Z" /></svg>
@@ -412,22 +394,18 @@ export default function GeneratorClient() {
             </div>
           </section>
 
-          {/* B — BUILDER GRID */}
+          {}
           <section className="build-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', paddingBottom: 'clamp(40px,6vw,72px)', alignItems: 'start' }}>
 
-            {/* LEFT: CONTROLS */}
-            {/* minWidth:0 keeps a grid item from being sized by its widest
-                descendant — without it the workflow YAML / README snippet code
-                blocks would widen this track and push the preview column out. */}
+            {}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
 
-              {/* PROFILE PRESETS */}
+              {}
               <ProfilePresets activeId={activePreset} onPick={applyPreset} />
 
-              {/* Import */}
+              {}
               <Hover as="button" onClick={() => {
-                // Pulls the REAL display name off the verified profile — no
-                // placeholder handle is ever written into the form.
                 if (profile.status !== 'verified') { setOpen(o => ({ ...o, badge: true })); document.getElementById('badge-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
                 patch({ name: profile.name || profile.login, githubUsername: profile.login });
                 setImported(true);
@@ -438,7 +416,7 @@ export default function GeneratorClient() {
                 {imported ? 'Imported ✓' : profile.status === 'verified' ? `Import from GitHub — @${profile.login}` : 'Import from GitHub'}
               </Hover>
 
-              {/* NAME */}
+              {}
               <CollapsibleSection id="name-section" open={open.name} onToggle={() => toggleSection('name')} title="Name" subtitle="The display name in your README header" noBorderTopContent>
                 <div style={{ padding: '0 22px 22px' }}>
                   <FieldLabel style={{ borderTop: '1px solid var(--line2)', paddingTop: '18px' }}>Display name</FieldLabel>
@@ -447,7 +425,7 @@ export default function GeneratorClient() {
                 </div>
               </CollapsibleSection>
 
-              {/* DESCRIPTION */}
+              {}
               <CollapsibleSection id="description-section" open={open.desc} onToggle={() => toggleSection('desc')} title="Description" subtitle="A one-line bio or tagline that's all you" noBorderTopContent>
                 <div style={{ padding: '0 22px 22px' }}>
                   <FieldLabel style={{ borderTop: '1px solid var(--line2)', paddingTop: '18px' }}>Bio / tagline</FieldLabel>
@@ -456,7 +434,7 @@ export default function GeneratorClient() {
                 </div>
               </CollapsibleSection>
 
-              {/* TECHNOLOGIES */}
+              {}
               <CollapsibleSection id="technologies-section" open={open.tech} onToggle={() => toggleSection('tech')} title="Technologies" count={state.techs.length} subtitle="Showcase the tools you build with" onReset={state.techs.length ? () => patch({ techs: [] }) : undefined} maxHeightOpen="1500px">
                 <div style={{ padding: '0 22px 22px' }}>
                   <div className="ui" style={{ position: 'relative', marginTop: '18px' }}>
@@ -464,7 +442,7 @@ export default function GeneratorClient() {
                     <input className="sf-input" value={techSearch} onChange={(e) => setTechSearch(e.target.value)} placeholder="Search technologies…" style={{ width: '100%', fontSize: '14px', padding: '12px 14px 12px 40px', border: '1px solid var(--line)', borderRadius: '11px', background: 'var(--surface2)' }} />
                   </div>
 
-                  {/* Icon style — drives how each pick renders in the README */}
+                  {}
                   <FieldLabel style={{ marginTop: '18px', marginBottom: '10px' }}>Icon style</FieldLabel>
                   <Segmented<TechIconDisplay>
                     value={state.techIconDisplay}
@@ -509,7 +487,7 @@ export default function GeneratorClient() {
                 </div>
               </CollapsibleSection>
 
-              {/* SOCIALS */}
+              {}
               <CollapsibleSection id="socials-section" open={open.social} onToggle={() => toggleSection('social')} title="Socials" count={state.socials.length} subtitle="Link the places people can find you" onReset={state.socials.length ? () => patch({ socials: [], socialLinks: {} }) : undefined} maxHeightOpen="1500px">
                 <div style={{ padding: '0 22px 22px' }}>
                   <div className="ui" style={{ display: 'flex', gap: '4px', padding: '5px', border: '1px solid var(--line)', borderRadius: '13px', background: 'var(--surface2)', marginTop: '18px' }}>
@@ -558,7 +536,7 @@ export default function GeneratorClient() {
                 </div>
               </CollapsibleSection>
 
-              {/* STREAKFORGE BADGE */}
+              {}
               <BadgeSection
                 open={open.badge}
                 onToggle={() => toggleSection('badge')}
@@ -572,7 +550,7 @@ export default function GeneratorClient() {
                 onReset={() => patch({ showBadge: false, badgeAccent: '', githubUsername: '' })}
               />
 
-              {/* CONTRIBUTION VISUALIZATIONS */}
+              {}
               <ContributionGraphSection
                 open={open.viz}
                 onToggle={() => toggleSection('viz')}
@@ -588,7 +566,7 @@ export default function GeneratorClient() {
                 onReset={() => patch({ showSnakeGraph: false, showPacmanGraph: false, graphPlacement: 'bottom' })}
               />
 
-              {/* REPOSITORY SPOTLIGHT */}
+              {}
               <RepoSpotlightSection
                 open={open.spotlight}
                 onToggle={() => toggleSection('spotlight')}
@@ -602,10 +580,10 @@ export default function GeneratorClient() {
               />
             </div>
 
-            {/* RIGHT: PREVIEW + SCORE */}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, position: 'sticky', top: '96px' }}>
 
-              {/* PREVIEW PANEL */}
+              {}
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '18px', boxShadow: 'var(--shadow)', padding: '18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div className="ui" style={{ display: 'flex', gap: '4px', padding: '5px', border: '1px solid var(--line)', borderRadius: '12px', background: 'var(--surface2)' }}>
@@ -614,7 +592,7 @@ export default function GeneratorClient() {
                   </div>
                   <div className="ui" style={{ display: 'flex', gap: '9px' }}>
                     <Hover as="button" onClick={() => {
-                      try { const blob = new Blob([md], { type: 'text/markdown' }); const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = 'README.md'; a.click(); setTimeout(() => URL.revokeObjectURL(u), 1000); } catch { /* noop */ }
+                      try { const blob = new Blob([md], { type: 'text/markdown' }); const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = 'README.md'; a.click(); setTimeout(() => URL.revokeObjectURL(u), 1000); } catch { }
                       setDownloaded(true);
                       if (dlRef.current) clearTimeout(dlRef.current);
                       dlRef.current = setTimeout(() => setDownloaded(false), 1600);
@@ -629,9 +607,7 @@ export default function GeneratorClient() {
                   </div>
                 </div>
                 <div style={{ marginTop: '16px', border: '1px solid var(--line2)', borderRadius: '14px', overflow: 'hidden', background: '#0c0e16' }}>
-                  {/* No max-height and no inner scroll: the panel is exactly as
-                      tall as the document it is previewing, so it grows and
-                      shrinks as sections are toggled or a preset is applied. */}
+                  {}
                   {previewTab === 'preview' && <div style={{ padding: 'clamp(20px,3vw,36px)', minHeight: '240px', color: '#e8ecf4' }}><ReadmePreview state={state} /></div>}
                   {previewTab === 'markdown' && <pre className="mono" style={{ margin: 0, padding: '22px', fontSize: '12px', lineHeight: 1.7, color: '#cdd6e6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', minHeight: '240px' }}>{md}</pre>}
                 </div>
@@ -641,7 +617,7 @@ export default function GeneratorClient() {
                 </div>
               </div>
 
-              {/* COMPLETION SCORE */}
+              {}
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '18px', boxShadow: 'var(--shadow)', padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: 600, letterSpacing: '-.01em' }}><svg width={18} height={18} viewBox="0 0 16 16" fill="none" stroke="var(--accent-ink)" strokeWidth={1.6}><path d="M2 13V3M2 13h12M5 11V7M8 11V4M11 11V9" /></svg>README Completion Score</div>
@@ -666,7 +642,7 @@ export default function GeneratorClient() {
                 </div>
               </div>
 
-              {/* INSIGHTS */}
+              {}
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '18px', boxShadow: 'var(--shadow)', padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: 600, letterSpacing: '-.01em' }}><svg width={18} height={18} viewBox="0 0 16 16" fill="none" stroke="var(--accent-2)" strokeWidth={1.5}><path d="M8 1.5a4.5 4.5 0 0 0-2.5 8.3V12h5v-2.2A4.5 4.5 0 0 0 8 1.5ZM6 14h4M6.5 12v2M9.5 12v2" /></svg>README Insights</div>
@@ -684,12 +660,12 @@ export default function GeneratorClient() {
                 </div>
               </div>
 
-              {/* README HEALTH BREAKDOWN + QUICK FIXES */}
+              {}
               <ReadmeHealthBreakdown state={state} onJump={jumpToSection} />
             </div>
           </section>
 
-          {/* FOOTER */}
+          {}
           <footer className="ui" style={{ padding: 'clamp(40px,6vw,80px) 0 40px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: '30px' }}>
               <div style={{ minWidth: '180px' }}>

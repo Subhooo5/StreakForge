@@ -1,17 +1,5 @@
-/**
- * Illustrative Snake / Pac-Man previews for the Contribution Visualizations
- * panel. These are NOT live data — they only stand in until the user's own
- * GitHub Action has published a real graph, so the preview panel always shows
- * what the animation looks like. Anywhere a real graph exists, it wins; these
- * are clearly labelled "SAMPLE PREVIEW" in the UI.
- *
- * Encoded as data URIs so they render from a plain <img src> with no extra
- * network request and no SVG-in-JSX hydration cost.
- */
-
 const GITHUB_GREENS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
 
-/** Deterministic pseudo-random intensity 0–4, seeded by (col, row). */
 function sampleIntensity(col: number, row: number): number {
   const seed = Math.sin(col * 12.9898 + row * 78.233) * 43758.5453;
   return Math.floor((seed - Math.floor(seed)) * 5);
@@ -37,8 +25,6 @@ function buildGrid(): string {
 }
 
 function buildSnakeSvg(): string {
-  // A short illustrative body weaving through a few cells — it does not trace
-  // any real route, it just suggests the animation.
   const cells: [number, number][] = [
     [2, 3],
     [3, 3],

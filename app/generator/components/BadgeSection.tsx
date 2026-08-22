@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import CollapsibleSection from './CollapsibleSection';
 import { CHECK_CIRCLE, ExternalLink, FieldLabel, Hover, PreviewStage, SearchInput, Spinner, StatusLine, ToggleRow, WARN_TRI } from './ui';
 import { buildBadgeUrl, cleanAccent } from '../utils/readme';
-import type { GithubProfile } from '../data/useGithubProfile';
+import type { GithubProfile } from '../hooks/useGithubProfile';
 
 interface BadgeSectionProps {
   open: boolean;
@@ -29,17 +29,11 @@ function StatCard({ label, unit, value, color }: { label: string; unit: string; 
   );
 }
 
-/**
- * The StreakForge badge block: include toggle, verified GitHub handle, optional
- * accent override, and a live preview rendered by the real `/api/streak`
- * pipeline (the same route the README embed points at).
- */
 export default function BadgeSection({ open, onToggle, username, onUsernameChange, show, onShowChange, accent, onAccentChange, profile, onReset }: BadgeSectionProps) {
   const trimmed = username.trim();
   const accentHex = cleanAccent(accent);
   const verified = profile.status === 'verified';
 
-  // Preview hits the same route as the README embed, just relative.
   const previewSrc = verified ? `${buildBadgeUrl(profile.login || trimmed, accent, '/api/streak')}&theme=dark` : null;
 
   const [loaded, setLoaded] = useState(false);
@@ -70,8 +64,7 @@ export default function BadgeSection({ open, onToggle, username, onUsernameChang
         />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--line2)' }}>
-            {/* GitHub username — shared with the graphs and spotlight sections,
-                so it stays available even when the badge itself is off. */}
+            {}
             <div>
               <FieldLabel style={{ marginBottom: '10px' }}>GitHub username</FieldLabel>
               <SearchInput
@@ -114,7 +107,7 @@ export default function BadgeSection({ open, onToggle, username, onUsernameChang
               )}
             </div>
 
-            {/* Accent colour */}
+            {}
             {show && (
             <div>
               <FieldLabel style={{ marginBottom: '10px' }}>Accent colour (optional)</FieldLabel>
@@ -142,7 +135,7 @@ export default function BadgeSection({ open, onToggle, username, onUsernameChang
             </div>
             )}
 
-            {/* Live preview */}
+            {}
             {show && verified && previewSrc && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' }}>

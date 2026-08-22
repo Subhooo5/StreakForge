@@ -6,17 +6,9 @@ export interface ProfilePreset {
   description: string;
   icon: string;
   badge: string;
-  /** Partial state merged over the current state when the preset is picked. */
   state: Partial<GeneratorState>;
 }
 
-/**
- * One-click starting points for the README.
- *
- * Tech / social entries use the display names from `generatorData.ts` (that is
- * the id everywhere in this page), so a preset selection immediately drives the
- * README preview, the raw markdown and the completion score off the same state.
- */
 export const PROFILE_PRESETS: ProfilePreset[] = [
   {
     id: 'fullstack',

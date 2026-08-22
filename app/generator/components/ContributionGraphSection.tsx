@@ -7,7 +7,7 @@ import { PACMAN_SAMPLE_PREVIEW_SRC, SNAKE_SAMPLE_PREVIEW_SRC } from '../data/sam
 import { pacmanGraphUrls, snakeGraphUrls } from '../utils/readme';
 import { generateReadmeSnippet, generateWorkflowYaml, getPlacementHint, getWorkflowFilename, type GraphKind } from '../utils/workflow';
 import { isValidGithubUsername } from '../utils/username';
-import type { GithubProfile } from '../data/useGithubProfile';
+import type { GithubProfile } from '../hooks/useGithubProfile';
 import type { GraphPlacement } from '../types';
 
 interface ContributionGraphSectionProps {
@@ -80,11 +80,6 @@ function GraphPreview({ kind, username, live, sample }: { kind: GraphKind; usern
   );
 }
 
-/**
- * Snake / Pac-Man contribution graphs. The two are mutually exclusive: turning
- * one on turns the other off, which matches how the README block and the
- * generated workflow are built (one graph, one Action, one snippet).
- */
 export default function ContributionGraphSection({ open, onToggle, username, onUsernameChange, showSnake, showPacman, onShowSnakeChange, onShowPacmanChange, placement, onPlacementChange, profile, onReset }: ContributionGraphSectionProps) {
   const [showInstructions, setShowInstructions] = useState(false);
   const [tab, setTab] = useState<GraphKind>('snake');
@@ -93,7 +88,6 @@ export default function ContributionGraphSection({ open, onToggle, username, onU
   const formatOk = isValidGithubUsername(trimmed);
   const anyOn = showSnake || showPacman;
 
-  // Keep the instructions tab on whichever graph is actually enabled.
   useEffect(() => {
     if (showSnake) setTab('snake');
     else if (showPacman) setTab('pacman');
@@ -140,7 +134,7 @@ export default function ContributionGraphSection({ open, onToggle, username, onU
 
         {anyOn && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', paddingTop: '18px', borderTop: '1px solid var(--line2)' }}>
-            {/* Username */}
+            {}
             <div>
               <FieldLabel style={{ marginBottom: '10px' }}>GitHub username</FieldLabel>
               <SearchInput
@@ -171,7 +165,7 @@ export default function ContributionGraphSection({ open, onToggle, username, onU
               )}
             </div>
 
-            {/* Placement */}
+            {}
             <div>
               <FieldLabel style={{ marginBottom: '10px' }}>Placement location</FieldLabel>
               <Segmented
@@ -186,7 +180,7 @@ export default function ContributionGraphSection({ open, onToggle, username, onU
               />
             </div>
 
-            {/* Setup instructions */}
+            {}
             <div style={{ padding: '14px', border: `1px solid ${showInstructions ? 'var(--line2)' : 'color-mix(in srgb,var(--accent) 38%,var(--line))'}`, borderRadius: '15px', background: showInstructions ? 'var(--surface2)' : 'color-mix(in srgb,var(--accent) 6%,transparent)', transition: 'border-color .3s,background .3s' }}>
               <button type="button" onClick={() => setShowInstructions((v) => !v)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%', textAlign: 'left' }}>
                 <span className="ui" style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', fontSize: '13px', fontWeight: 700, color: showInstructions ? 'var(--text)' : 'var(--accent-ink)' }}>
@@ -237,7 +231,7 @@ export default function ContributionGraphSection({ open, onToggle, username, onU
               )}
             </div>
 
-            {/* Live preview */}
+            {}
             {formatOk && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '18px', borderTop: '1px solid var(--line2)' }}>
                 <FieldLabel>Live preview</FieldLabel>

@@ -4,10 +4,6 @@ import { TECH_ICONS, SOCIAL_ICONS } from '../data/generatorData';
 import { activeSocials, buildBadgeUrl, buildSpotlightUrl, pacmanGraphUrls, resolveSocialUrl, shieldsBadgeUrl, snakeGraphUrls } from '../utils/readme';
 import type { GeneratorState } from '../types';
 
-// Rendered twin of `generateReadme`. It walks the SAME section order (including
-// where the contribution graph is injected), so what the Preview tab shows and
-// what the Markdown tab lists can never drift apart.
-
 const HEADING: React.CSSProperties = {
   fontFamily: "'Space Grotesk',sans-serif",
   fontSize: '19px',
@@ -23,7 +19,6 @@ function Icon({ src, alt, size }: { src: string; alt: string; size: number }) {
   return <img src={src} alt={alt} title={alt} width={size} height={size} loading="lazy" decoding="async" style={{ width: size + 'px', height: size + 'px', objectFit: 'contain', display: 'block' }} />;
 }
 
-/** Simple Icons are monochrome — the README serves white to dark readers. */
 function iconSrc(url: string): string {
   return url.startsWith('https://cdn.simpleicons.org/') ? `${url}/ffffff` : url;
 }

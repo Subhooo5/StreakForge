@@ -8,16 +8,9 @@ interface CollapsibleSectionProps {
   subtitle: string;
   children: React.ReactNode;
   noBorderTopContent?: boolean;
-  /** Anchor target for the Quick Fixes buttons. */
   id?: string;
-  /** Small count chip next to the title (hidden when 0/undefined). */
   count?: number;
-  /** Shows a reset control in the header when provided. */
   onReset?: () => void;
-  /**
-   * Max height of the open body. The default suits the short sections; the
-   * taller ones (workflow YAML, previews) pass their own so nothing clips.
-   */
   maxHeightOpen?: string;
 }
 

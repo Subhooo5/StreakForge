@@ -29,11 +29,6 @@ const BULB = (
   </svg>
 );
 
-/**
- * Pass/fail view of the README plus one-tap jumps to whatever is missing.
- * Every value is derived from `state` on each render, so it tracks the form
- * exactly — nothing here is cached or debounced.
- */
 export default function ReadmeHealthBreakdown({ state, onJump }: { state: GeneratorState; onJump: (sectionId: string) => void }) {
   const { items, percentage, missing } = computeHealth(state);
   const insight = topInsight(state);

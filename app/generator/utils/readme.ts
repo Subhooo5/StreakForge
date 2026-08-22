@@ -1,23 +1,17 @@
 import { TECH_ICONS, SOCIAL_ICONS, TECH_SHIELDS_SLUG, PLATS } from '../data/generatorData';
 import type { GeneratorState } from '../types';
 
-// ── Canonical public URLs ───────────────────────────────────────────────────
-// Same host + route the copy-link modal on Home uses: the ONE data route,
-// `/api/streak`, serves the badge SVG and (with `view=spotlight`) the
-// repository card.
 export const SITE_BASE = 'https://streakforge.dev';
 export const BADGE_BASE = `${SITE_BASE}/api/streak`;
 export const DASHBOARD_BASE = `${SITE_BASE}/dashboard`;
 
 const HEX6 = /^[0-9a-fA-F]{6}$/;
 
-/** Normalises a user-typed accent to a bare 6-digit hex, or `null`. */
 export function cleanAccent(accent: string): string | null {
   const c = (accent || '').replace(/^#/, '').trim();
   return HEX6.test(c) ? c.toLowerCase() : null;
 }
 
-/** `/api/streak` URL for the live 3D streak badge. */
 export function buildBadgeUrl(username: string, accent: string, base = BADGE_BASE): string {
   const params = new URLSearchParams({ user: username });
   const c = cleanAccent(accent);
@@ -25,7 +19,6 @@ export function buildBadgeUrl(username: string, accent: string, base = BADGE_BAS
   return `${base}?${params.toString()}`;
 }
 
-/** `/api/streak` URL for the repository spotlight card. */
 export function buildSpotlightUrl(
   username: string,
   repo: string,
@@ -38,10 +31,6 @@ export function buildSpotlightUrl(
   return `${base}?${params.toString()}`;
 }
 
-/**
- * Turns whatever the user typed for a platform into a usable href.
- * Email becomes `mailto:`; a bare host/path gets an `https://` prefix.
- */
 export function resolveSocialUrl(platform: string, value: string): string {
   const v = (value || '').trim();
   if (!v) return '';
@@ -51,12 +40,10 @@ export function resolveSocialUrl(platform: string, value: string): string {
   return `https://${v.replace(/^\/+/, '')}`;
 }
 
-/** Socials that are both selected AND have a link filled in. */
 export function activeSocials(state: GeneratorState): string[] {
   return state.socials.filter((p) => (state.socialLinks[p] || '').trim().length > 0);
 }
 
-/** shields.io "for-the-badge" URL for the Logo + Name display mode. */
 export function shieldsBadgeUrl(tech: string): string {
   const label = encodeURIComponent(tech).replace(/-/g, '--');
   const slug = TECH_SHIELDS_SLUG[tech];
@@ -64,7 +51,6 @@ export function shieldsBadgeUrl(tech: string): string {
   return slug ? `${base}&logo=${slug}&logoColor=ffffff` : base;
 }
 
-/** Raw GitHub URLs the Snake / Pac-Man Actions publish to the `output` branch. */
 export function snakeGraphUrls(username: string) {
   const b = `https://raw.githubusercontent.com/${username}/${username}/output`;
   return { light: `${b}/github-snake.svg`, dark: `${b}/github-snake-dark.svg` };
@@ -77,8 +63,6 @@ export function pacmanGraphUrls(username: string) {
     dark: `${b}/pacman-contribution-graph-dark.svg`,
   };
 }
-
-// ── Markdown builders ───────────────────────────────────────────────────────
 
 function graphsMarkdown(state: GeneratorState): string | null {
   const username = state.githubUsername.trim();
@@ -125,8 +109,6 @@ function techMarkdown(state: GeneratorState): string | null {
       const url = TECH_ICONS[tech];
       if (!url) return null;
       if (url.startsWith('https://cdn.simpleicons.org/')) {
-        // Simple Icons are monochrome — serve a white variant to dark readers
-        // and a black one to light readers so they stay legible either way.
         const slug = url.split('/').pop() as string;
         return [
           '<picture>',
@@ -229,7 +211,6 @@ function spotlightMarkdown(state: GeneratorState): string | null {
   ].join('\n');
 }
 
-/** The README the current state produces, section by section. */
 export function generateReadme(state: GeneratorState): string {
   const sections: string[] = [];
   const graphs = graphsMarkdown(state);
@@ -268,7 +249,6 @@ export function generateReadme(state: GeneratorState): string {
   return sections.join('\n\n---\n\n') + '\n';
 }
 
-/** Placeholder document shown before anything has been filled in. */
 export function getEmptyReadme(): string {
   return [
     '<div align="center">',
@@ -282,7 +262,6 @@ export function getEmptyReadme(): string {
   ].join('\n');
 }
 
-/** Placeholder URL for a platform, used by the "Add links" inputs. */
 export function socialPlaceholder(platform: string): string {
   return PLATS.find((p) => p.name === platform)?.placeholder ?? '';
 }

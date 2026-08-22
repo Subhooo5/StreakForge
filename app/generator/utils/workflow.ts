@@ -3,12 +3,6 @@ import type { GraphPlacement } from '../types';
 
 export type GraphKind = 'snake' | 'pacman';
 
-/**
- * GitHub Actions workflow that regenerates the contribution graph and pushes
- * it to the `output` branch of the user's `<username>/<username>` profile repo.
- * The username is spelled out literally (rather than `github.repository_owner`)
- * so the file is copy-paste safe wherever it lands.
- */
 export function generateWorkflowYaml(kind: GraphKind, username: string): string {
   const user = username.trim() || 'your-username';
 
@@ -85,7 +79,6 @@ jobs:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`;
 }
 
-/** The README snippet that embeds whatever the workflow published. */
 export function generateReadmeSnippet(kind: GraphKind, username: string): string {
   const user = username.trim() || 'your-username';
 
@@ -106,12 +99,10 @@ export function generateReadmeSnippet(kind: GraphKind, username: string): string
 </picture>`;
 }
 
-/** File name to save the workflow under in `.github/workflows/`. */
 export function getWorkflowFilename(kind: GraphKind): string {
   return kind === 'snake' ? 'snake-graph.yml' : 'pacman-graph.yml';
 }
 
-/** Human-readable hint matching the chosen placement. */
 export function getPlacementHint(placement: GraphPlacement): string {
   switch (placement) {
     case 'top':

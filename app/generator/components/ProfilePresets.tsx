@@ -9,11 +9,6 @@ const SPARK = (
   </svg>
 );
 
-/**
- * One-click starting points. Picking one merges the preset over the current
- * state, so the description field, README preview and raw markdown all move to
- * the preset's content in the same render.
- */
 export default function ProfilePresets({ activeId, onPick }: { activeId: string | null; onPick: (preset: ProfilePreset) => void }) {
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '18px', boxShadow: 'var(--shadow)', padding: '22px' }}>
