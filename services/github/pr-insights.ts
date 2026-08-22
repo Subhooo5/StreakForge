@@ -40,10 +40,10 @@ export interface PRInsightData {
   openPRs: number;
   mergedPRs: number;
   closedPRs: number;
-  mergeRate: number; // percentage
-  avgReviewTime: number; // in hours
-  avgTimeToFirstReview: number; // in hours
-  avgCycleTime: number; // in hours (from creation to merge)
+  mergeRate: number;
+  avgReviewTime: number;
+  avgTimeToFirstReview: number;
+  avgCycleTime: number;
 
   weeklyActivity: { name: string; prs: number }[];
   monthlyActivity: { name: string; prs: number }[];
@@ -51,8 +51,8 @@ export interface PRInsightData {
   reviewsGiven: number;
   reviewsReceived: number;
   avgReviewResponseTime: number;
-  fastestReview: number; // in hours
-  slowestReview: number; // in hours
+  fastestReview: number;
+  slowestReview: number;
 
   repoPerformance: {
     name: string;
@@ -64,7 +64,7 @@ export interface PRInsightData {
 
   highlights: {
     mostDiscussed?: { title: string; url: string; comments: number };
-    fastestMerged?: { title: string; url: string; time: number }; // time in hours
+    fastestMerged?: { title: string; url: string; time: number };
     largest?: { title: string; url: string; additions: number; deletions: number };
   };
   prs: { title: string; url: string; state: string; createdAt: string; repo: string }[];
@@ -94,7 +94,7 @@ export async function fetchPRInsights(
   signal?: AbortSignal
 ): Promise<PRInsightData> {
   const cacheKey = `pr-insights:${username.toLowerCase()}`;
-  const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes cache
+  const CACHE_TTL_MS = 15 * 60 * 1000;
 
   return prInsightsCache.getOrSet(
     cacheKey,
@@ -110,9 +110,6 @@ async function fetchPRInsightsUncached(
   userToken?: string,
   signal?: AbortSignal
 ): Promise<PRInsightData> {
-  // We use the GraphQL search API to get PRs authored by the user and PRs reviewed by the user.
-  // This is more efficient than iterating through user.pullRequests.
-
   const query = `
     query($authorQuery: String!, $reviewerQuery: String!, $after: String) {
       authored: search(query: $authorQuery, type: ISSUE, first: 100, after: $after) {
@@ -158,7 +155,6 @@ async function fetchPRInsightsUncached(
     }
   `;
 
-  // Get PRs from the last year to keep payload reasonable
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const dateStr = oneYearAgo.toISOString().split('T')[0];
@@ -203,7 +199,6 @@ async function fetchPRInsightsUncached(
 
   const authoredPRs = allAuthoredPRs;
 
-  // Process data
   const totalPRs = authoredPRs.length;
   let openPRs = 0;
   let mergedPRs = 0;
@@ -235,7 +230,6 @@ async function fetchPRInsightsUncached(
   };
 
   for (const pr of authoredPRs) {
-    // Basic stats
     if (pr.state === 'OPEN') openPRs++;
     else if (pr.state === 'MERGED') mergedPRs++;
     else closedPRs++;
@@ -249,18 +243,14 @@ async function fetchPRInsightsUncached(
       sizeDistribution.massive++;
     }
 
-    // Activity timelines
     const createdDate = new Date(pr.createdAt);
 
-    // Group by month
     const monthKey = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
     monthlyActivityMap.set(monthKey, (monthlyActivityMap.get(monthKey) || 0) + 1);
 
-    // Group by week (ISO week roughly)
     const weekKey = getWeekKey(createdDate);
     weeklyActivityMap.set(weekKey, (weeklyActivityMap.get(weekKey) || 0) + 1);
 
-    // Repos
     const repoName = pr.repository?.nameWithOwner || 'Unknown';
     if (!repoMap.has(repoName)) {
       repoMap.set(repoName, { total: 0, merged: 0, reviewCount: 0, reviewTimeSum: 0 });
@@ -269,7 +259,6 @@ async function fetchPRInsightsUncached(
     repoStats.total++;
     if (pr.state === 'MERGED') repoStats.merged++;
 
-    // Cycle time (Merged - Created)
     if (pr.mergedAt) {
       const mergedDate = new Date(pr.mergedAt);
       const hours = (mergedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
@@ -280,28 +269,23 @@ async function fetchPRInsightsUncached(
       }
     }
 
-    // Size
     if (pr.additions + pr.deletions > largest.additions + largest.deletions) {
       largest = { title: pr.title, url: pr.url, additions: pr.additions, deletions: pr.deletions };
     }
 
-    // Comments
     if (pr.comments !== null && (pr.comments?.totalCount ?? 0) > mostDiscussed.comments) {
       mostDiscussed = { title: pr.title, url: pr.url, comments: pr.comments.totalCount };
     }
 
-    // Reviews - use totalCount for accurate count, nodes for timing analysis
     const reviews = pr.reviews?.nodes || [];
     const totalReviewCount = pr.reviews?.totalCount || reviews.length;
     const prReviewTimes: number[] = [];
 
-    // Use totalCount for accurate reviewsReceived (accounts for reviews beyond first 100)
     reviewsReceived += totalReviewCount;
     repoStats.reviewCount += totalReviewCount;
 
-    // Analyze timing from available nodes (first 100 reviews)
     for (const review of reviews) {
-      if (review.author?.login === username) continue; // skip self reviews
+      if (review.author?.login === username) continue;
 
       const reviewDate = new Date(review.createdAt);
       const diffHours = (reviewDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
@@ -319,7 +303,6 @@ async function fetchPRInsightsUncached(
     }
   }
 
-  // Calculate averages
   const mergeRate = totalPRs > 0 ? (mergedPRs / totalPRs) * 100 : 0;
   const avgCycleTime =
     cycleTimes.length > 0 ? cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length : 0;
@@ -330,18 +313,16 @@ async function fetchPRInsightsUncached(
       ? firstReviewTimes.reduce((a, b) => a + b, 0) / firstReviewTimes.length
       : 0;
 
-  // Format activity
   const weeklyActivity = Array.from(weeklyActivityMap.entries())
     .map(([name, prs]) => ({ name, prs }))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(-12); // last 12 weeks
+    .slice(-12);
 
   const monthlyActivity = Array.from(monthlyActivityMap.entries())
     .map(([name, prs]) => ({ name, prs }))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(-12); // last 12 months
+    .slice(-12);
 
-  // Format Repo Performance
   const repoPerformance = Array.from(repoMap.entries())
     .map(([name, stats]) => ({
       name,
@@ -366,7 +347,7 @@ async function fetchPRInsightsUncached(
     monthlyActivity,
     reviewsGiven: reviewsGivenCount,
     reviewsReceived,
-    avgReviewResponseTime: avgReviewTime, // using same metric for now
+    avgReviewResponseTime: avgReviewTime,
     fastestReview: fastestReview === Infinity ? 0 : fastestReview,
     slowestReview,
     repoPerformance,

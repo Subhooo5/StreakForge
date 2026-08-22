@@ -12,12 +12,11 @@ import type {
   WeeklyActivity,
 } from '@/types/burnout';
 
-/** One week of a contributor's history as GitHub reports it. */
 interface ContributorWeekData {
-  w: number; // week start (Unix seconds)
-  a: number; // additions
-  d: number; // deletions
-  c: number; // commits
+  w: number;
+  a: number;
+  d: number;
+  c: number;
 }
 
 interface ContributorStats {
@@ -26,35 +25,20 @@ interface ContributorStats {
   total: number;
 }
 
-/** `[dayOfWeek (0=Sunday), hourOfDay, commits]`, as GitHub's punch card returns it. */
 type PunchCardEntry = [number, number, number];
 
 const GITHUB_REST_URL = 'https://api.github.com';
 
-/** Trailing window every per-contributor metric is measured over. */
 const TREND_WEEKS = 12;
-/** GitHub caps `stats/contributors` at this many contributors. */
 const CONTRIBUTOR_CEILING = 500;
-/** Commits outside this hour range count as off-hours. */
 const WORK_HOURS_START = 9;
 const WORK_HOURS_END = 18;
 
-/**
- * Model backing the AI half of the recommendations panel.
- *
- * Overridable via `GEMINI_MODEL`. The default is deliberately not
- * `gemini-2.5-flash`: Google has retired that identifier for new keys and
- * answers it with a 404 pointing at this one, which would silently drop the
- * page back to heuristic-only advice.
- */
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.6-flash';
 
-/** Ceiling per recommendation attempt, independent of the route's budget. */
 const GEMINI_TIMEOUT_MS = 15000;
-/** Attempts before falling back to heuristics-only advice. */
 const GEMINI_ATTEMPTS = 2;
 
-/** A signal that aborts with `parent`, or after `ms`, whichever comes first. */
 function withTimeout(parent: AbortSignal | undefined, ms: number): AbortSignal {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
@@ -69,11 +53,6 @@ function withTimeout(parent: AbortSignal | undefined, ms: number): AbortSignal {
   return controller.signal;
 }
 
-/**
- * Only the derived report is cached, never the upstream payload —
- * `stats/contributors` is measured in megabytes for a large repository
- * (~12.5 MB for facebook/react) while the report below is a few kilobytes.
- */
 const reportCache = new DistributedCache<BurnoutReport>(200);
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
@@ -104,14 +83,6 @@ export interface BurnoutAnalysisOptions {
   signal?: AbortSignal;
 }
 
-/**
- * Burnout and sustainability report for one repository.
- *
- * `excludeBots` is part of the cache key rather than a post-filter: dropping
- * bot accounts changes the commit totals every downstream figure is derived
- * from, so the two variants are genuinely different analyses and must not
- * share a cache entry.
- */
 export async function fetchBurnoutAnalysis(
   owner: string,
   repo: string,
@@ -131,10 +102,6 @@ export async function fetchBurnoutAnalysis(
   return reportCache.getOrSet(cacheKey, run, CACHE_TTL_MS);
 }
 
-/**
- * GitHub computes repository statistics asynchronously and answers 202 while a
- * job is running. Retry with backoff until it settles.
- */
 async function fetchStatsWithCompilingRetry(
   url: string,
   headers: Record<string, string>,
@@ -167,13 +134,6 @@ async function fetchStatsWithCompilingRetry(
   throw new Error('GitHub is still compiling statistics. Please try again in a few moments.');
 }
 
-/**
- * Reads a statistics response body.
- *
- * A 204 with an empty body means GitHub has nothing to report — an empty
- * repository, or one whose history it has not compiled. That is a legitimate
- * outcome rather than a failure, so it resolves to `null`.
- */
 async function readStatsJson<T>(res: Response): Promise<T | null> {
   if (res.status === 204) return null;
   const text = await res.text();
@@ -185,7 +145,6 @@ async function readStatsJson<T>(res: Response): Promise<T | null> {
   }
 }
 
-/** A zeroed report, so an empty repository renders an empty state, not fake data. */
 function emptyReport(owner: string, repo: string, excludeBots: boolean): BurnoutReport {
   return {
     repoName: `${owner}/${repo}`,
@@ -215,16 +174,8 @@ function emptyReport(owner: string, repo: string, excludeBots: boolean): Burnout
   };
 }
 
-/**
- * Commit timing from GitHub's punch card.
- *
- * This is the only repository endpoint that exposes *when* commits land —
- * `stats/contributors` aggregates to whole weeks and cannot answer weekday or
- * hour questions. The punch card is repo-wide and carries no author, so it
- * cannot be filtered by contributor; see `botsExcluded` on the report.
- */
 function deriveTiming(punchCard: PunchCardEntry[] | null): CommitTiming {
-  const byWeekday = [0, 0, 0, 0, 0, 0, 0]; // Monday-first
+  const byWeekday = [0, 0, 0, 0, 0, 0, 0];
   const byHour = Array<number>(24).fill(0);
   let total = 0;
   let offHours = 0;
@@ -235,7 +186,6 @@ function deriveTiming(punchCard: PunchCardEntry[] | null): CommitTiming {
     const [sundayFirstDay, hour, commits] = entry;
     if (!Number.isFinite(commits) || commits <= 0) continue;
 
-    // GitHub indexes 0 = Sunday; the page reads Monday-first.
     const weekdayIndex = (sundayFirstDay + 6) % 7;
     byWeekday[weekdayIndex] += commits;
     if (hour >= 0 && hour < 24) byHour[hour] += commits;
@@ -260,15 +210,6 @@ function deriveTiming(punchCard: PunchCardEntry[] | null): CommitTiming {
   };
 }
 
-/**
- * Repository-wide weekly volume, summed from the same contributor weeks every
- * other figure uses.
- *
- * Deriving this from `stats/contributors` rather than `stats/commit_activity`
- * costs one fewer upstream request and — more importantly — means the bot
- * filter applies here too, so the chart always agrees with the commit total
- * printed above it.
- */
 function deriveWeeklyActivity(contributors: ContributorStats[]): WeeklyActivity {
   const totals = new Map<number, number>();
   for (const c of contributors) {
@@ -298,8 +239,6 @@ async function analyzeRepositoryUncached(
   const headers = getHeaders(userToken);
   const base = `${GITHUB_REST_URL}/repos/${owner}/${repo}`;
 
-  // Both statistics endpoints run together. `stats/contributors` dominates the
-  // wall clock, so the punch card is effectively free.
   const [contributorsRes, punchCardRes] = await Promise.all([
     fetchStatsWithCompilingRetry(`${base}/stats/contributors`, headers, signal),
     fetchStatsWithCompilingRetry(`${base}/stats/punch_card`, headers, signal).catch(() => null),
@@ -317,7 +256,6 @@ async function analyzeRepositoryUncached(
 
   const rawData = await readStatsJson<ContributorStats[]>(contributorsRes);
   if (!Array.isArray(rawData) || rawData.length === 0) {
-    // Empty repository, or history GitHub has not compiled. Report it as such.
     return emptyReport(owner, repo, !!excludeBots);
   }
 
@@ -369,7 +307,6 @@ async function analyzeRepositoryUncached(
       if (commits > 0) activeWeeks++;
       else restWeeks++;
 
-      // A week is intense at more than 8 commits or more than 750 added lines.
       const isHighIntensity = commits > 8 || additions > 750;
       if (isHighIntensity) {
         highIntensityWeeks++;
@@ -380,15 +317,12 @@ async function analyzeRepositoryUncached(
       }
     });
 
-    // Sustained intensity weighs heaviest; rest weeks pay it back down.
     let burnoutScore = maxConsecutiveHigh * 15 + highIntensityWeeks * 6 - restWeeks * 4;
 
-    // A sudden surge over the trailing three weeks is its own signal.
     const avgLast3 = recentTrend.slice(-3).reduce((a, b) => a + b, 0) / 3;
     const avgPreceding6 = recentTrend.slice(-9, -3).reduce((a, b) => a + b, 0) / 6;
     if (avgPreceding6 > 0 && avgLast3 > avgPreceding6 * 1.5) burnoutScore += 15;
 
-    // Carrying a large share of the repository raises exposure.
     burnoutScore += commitShare * 0.4;
 
     burnoutScore = Math.max(0, Math.min(100, Math.round(burnoutScore)));
@@ -410,7 +344,6 @@ async function analyzeRepositoryUncached(
       recentAdditionsTrend,
     });
 
-    // Previously active, now silent for the trailing three weeks.
     const avgHistory = recentTrend.slice(0, 9).reduce((a, b) => a + b, 0) / 9;
     const commitsRecent3 = recentTrend.slice(-3).reduce((a, b) => a + b, 0);
 
@@ -431,7 +364,6 @@ async function analyzeRepositoryUncached(
     }
   }
 
-  // Bus factor: how many of the top contributors it takes to reach 70% of commits.
   let runningCommits = 0;
   let busFactor = 0;
   for (const c of contributors) {
@@ -443,7 +375,6 @@ async function analyzeRepositoryUncached(
   const dependencyRisk: BurnoutReport['dependencyRisk'] =
     busFactor === 1 ? 'High' : busFactor <= 3 ? 'Medium' : 'Low';
 
-  // Sustainability: dependency exposure, burnout spread, and churn.
   let sustainabilityScore = 100;
   if (dependencyRisk === 'High') sustainabilityScore -= 30;
   else if (dependencyRisk === 'Medium') sustainabilityScore -= 12;
@@ -466,8 +397,6 @@ async function analyzeRepositoryUncached(
     sustainabilityScore,
   });
 
-  // A language model refines the advice when one is configured. Without a key
-  // the heuristic list stands on its own and nothing about the page changes.
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (geminiApiKey) {
     try {
@@ -487,9 +416,6 @@ async function analyzeRepositoryUncached(
         recommendations.unshift(...aiLines.map((text) => ({ text, ai: true })));
       }
     } catch (err) {
-      // Log the message, not the Error instance: the logger serialises the
-      // latter to `{}`, which hid whether this was a bad key, a retired model
-      // or an abort.
       logger.warn('Gemini recommendation generation failed. Falling back to rules-based analyzer.', {
         reason: err instanceof Error ? err.message : String(err),
       });
@@ -600,13 +526,6 @@ async function generateRecommendationsWithGemini(
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-  /**
-   * The model answers in roughly 7–10s, but intermittently reports itself
-   * overloaded (503) and only after a minute or so. One bounded retry turns
-   * that from "this repository silently gets heuristics only" into a brief
-   * extra wait, while a genuine misconfiguration (401/403/404) still fails on
-   * the first attempt rather than being retried pointlessly.
-   */
   let res: Response | undefined;
   let lastError: unknown;
 
@@ -617,18 +536,12 @@ async function generateRecommendationsWithGemini(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Google's Generative Language API authenticates on this header. The
-          // key comes from the environment — never inlined here.
           'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { responseMimeType: 'application/json' },
         }),
-        // Own budget on top of the route's signal: a large repository can spend
-        // most of the route's 45s inside GitHub's stats endpoint, which would
-        // otherwise starve this call on exactly the repositories that most need
-        // the advice.
         signal: withTimeout(input.signal, GEMINI_TIMEOUT_MS),
       });
     } catch (err) {
@@ -636,10 +549,6 @@ async function generateRecommendationsWithGemini(
       res = undefined;
     }
 
-    // Retry only what an immediate retry can fix: overload and timeouts.
-    // A 429 is deliberately excluded — Google's quota errors carry a retry
-    // delay measured in tens of seconds, so retrying here would only spend a
-    // second request from the same exhausted allowance.
     const transient = !res || (res.status >= 500 && res.status !== 501);
     if (!transient) break;
     if (attempt < GEMINI_ATTEMPTS - 1) await new Promise((r) => setTimeout(r, 800));
@@ -648,9 +557,6 @@ async function generateRecommendationsWithGemini(
   if (!res) throw lastError instanceof Error ? lastError : new Error('Gemini request failed');
 
   if (!res.ok) {
-    // Surface Google's own message — a retired model or a rejected key each
-    // return a 404/403 whose body says exactly which, and losing that made the
-    // failure indistinguishable from "no key configured".
     const detail = await res.text().catch(() => '');
     throw new Error(`Gemini API returned status ${res.status}${detail ? `: ${detail.slice(0, 300)}` : ''}`);
   }

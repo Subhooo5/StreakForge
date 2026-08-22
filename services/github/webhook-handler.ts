@@ -102,8 +102,6 @@ function extractWorkflowEvent(payload: WebhookPayload): CIEvent | null {
       runNumber: run.run_number,
       branch: run.head_branch,
       commit: run.head_commit.id.substring(0, 7),
-      // Commit messages can carry accidentally pasted credentials; scrub
-      // them before they reach analytics storage and dashboards.
       message: redactSecrets(run.head_commit.message),
       author: run.head_commit.author.name,
     },

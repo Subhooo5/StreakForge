@@ -20,7 +20,6 @@ export class PRService {
   public async fetchPRStatusDistribution(username: string): Promise<PRStatusData> {
     const sanitized = username.trim().toLowerCase();
 
-    // Simulate database/remote fetch
     const response = await fetch(`/api/github/prs?username=${sanitized}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

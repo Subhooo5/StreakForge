@@ -19,11 +19,6 @@ export class QuotaMonitor {
     return QuotaMonitor.instance;
   }
 
-  /**
-   * Updates quota state for a specific token using standard GitHub response headers.
-   * Falls back to a shared '__default__' key when no token identity is supplied,
-   * preserving backward compatibility for callers that don't yet pass one.
-   */
   public updateQuotaFromHeaders(
     headers: Headers | Record<string, string>,
     token: string = '__default__'
@@ -61,9 +56,6 @@ export class QuotaMonitor {
     this.tokenQuotas.set(token, existing);
   }
 
-  /**
-   * Updates quota manually for a specific token (useful for mocking/testing).
-   */
   public setQuota(
     limit: number,
     remaining: number,
@@ -73,10 +65,6 @@ export class QuotaMonitor {
     this.tokenQuotas.set(token, { limit, remaining, resetTime: resetTimeMs });
   }
 
-  /**
-   * Returns aggregate quota information across all tracked tokens, plus the
-   * worst-case (minimum remaining ratio) token's state for visibility.
-   */
   public getQuota() {
     const states = Array.from(this.tokenQuotas.values());
     if (states.length === 0) {
@@ -95,10 +83,6 @@ export class QuotaMonitor {
     };
   }
 
-  /**
-   * Returns aggregate quota summary across all tracked tokens.
-   * Values are masked for security — only aggregate sums and counts are exposed.
-   */
   public getAggregateQuota() {
     const states = Array.from(this.tokenQuotas.values());
     const tokenCount = this.tokenQuotas.size;
@@ -136,12 +120,6 @@ export class QuotaMonitor {
     this.totalRefreshes++;
   }
 
-  /**
-   * Returns true if ANY currently-tracked token's remaining quota is below
-   * 10% of its limit. Conservative by design: refresh operations are
-   * blocked globally if even one pooled token is close to exhaustion,
-   * since fetchWithRetry's round-robin could route the next request to it.
-   */
   public isQuotaLow(): boolean {
     for (const state of this.tokenQuotas.values()) {
       if (state.remaining < state.limit * 0.1) {
