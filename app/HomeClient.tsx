@@ -5,6 +5,7 @@ import { hash, useHomeStats } from "@/app/data/home";
 import { useTheme } from "@/hooks/useTheme";
 import { useUrlBackedState } from "@/hooks/useUrlParams";
 import { useRecentList } from "@/hooks/useRecentList";
+import { Hover } from "@/components/Hover";
 
 const NAV_REPO_BASE: React.CSSProperties = {
   display: "inline-flex",
@@ -45,25 +46,6 @@ const NAV_TOGGLE_HOVER: React.CSSProperties = {
 const cityPalette = "Brand";
 const monolithHeight = 1.1;
 const gridReactivity = 1.2;
-
-type HoverProps = React.HTMLAttributes<HTMLElement> & {
-  as?: React.ElementType;
-  base?: React.CSSProperties;
-  hover?: React.CSSProperties;
-  href?: string;
-  target?: string;
-  rel?: string;
-  "aria-label"?: string;
-};
-function Hover({ as = "div", base, hover, children, ...rest }: HoverProps) {
-  const [h, setH] = useState(false);
-  const Tag = as as React.ElementType;
-  return (
-    <Tag {...rest} style={{ ...base, ...(h ? hover : undefined) }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
-      {children}
-    </Tag>
-  );
-}
 
 type Poly = { pts: number[][]; fill: string; op: number; depth: number };
 

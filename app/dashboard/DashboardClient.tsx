@@ -23,6 +23,7 @@ import HistStatTile from "./components/HistStatTile";
 import CIHighlightCard from "./components/CIHighlightCard";
 import PRHighlightCard from "./components/PRHighlightCard";
 import ContributionCity from "./components/ContributionCity";
+import { Hover } from "@/components/Hover";
 
 const NAV_REPO_BASE: React.CSSProperties = {
   display: "inline-flex",
@@ -59,25 +60,6 @@ const NAV_TOGGLE_HOVER: React.CSSProperties = {
   transform: "translateY(-1px)",
   borderColor: "var(--accent)",
 };
-
-type HoverProps = React.HTMLAttributes<HTMLElement> & {
-  as?: React.ElementType;
-  base?: React.CSSProperties;
-  hover?: React.CSSProperties;
-  href?: string;
-  target?: string;
-  rel?: string;
-  "aria-label"?: string;
-};
-function Hover({ as = "div", base, hover, children, ...rest }: HoverProps) {
-  const [h, setH] = useState(false);
-  const Tag = as as React.ElementType;
-  return (
-    <Tag {...rest} style={{ ...base, ...(h ? hover : undefined) }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
-      {children}
-    </Tag>
-  );
-}
 
 const gridReactivity = 1.2;
 

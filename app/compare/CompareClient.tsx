@@ -15,25 +15,7 @@ import TrendCard from "./components/TrendCard";
 import { avatarFor, buildProfile, deriveRadar, deriveWinner, hash } from "./data/compareData";
 import { compareBadgeSrc, useArena, useBattle } from "./hooks/useCompare";
 import type { CompareActivityPayload } from "@/types/compare";
-
-type HoverProps = React.HTMLAttributes<HTMLElement> & {
-  as?: React.ElementType;
-  base?: React.CSSProperties;
-  hover?: React.CSSProperties;
-  href?: string;
-  target?: string;
-  rel?: string;
-  "aria-label"?: string;
-};
-function Hover({ as = "div", base, hover, children, ...rest }: HoverProps) {
-  const [h, setH] = useState(false);
-  const Tag = as as React.ElementType;
-  return (
-    <Tag {...rest} style={{ ...base, ...(h ? hover : undefined) }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
-      {children}
-    </Tag>
-  );
-}
+import { Hover } from "@/components/Hover";
 
 const gridReactivity = 1.2;
 const COMPARE_PARAMS = ["user1", "user2"];

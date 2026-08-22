@@ -19,26 +19,7 @@ import Toast, { useToast } from './components/Toast';
 import LoadingPanel from '@/components/LoadingPanel';
 import { classifyFailure } from '@/utils/emptyState';
 import { buildJson, buildMarkdown, buildPdf, buildShareLink, copyText, downloadBlob, reportFileBase } from './utils/report';
-
-type HoverProps = React.HTMLAttributes<HTMLElement> & {
-  as?: React.ElementType;
-  base?: React.CSSProperties;
-  hover?: React.CSSProperties;
-  href?: string;
-  target?: string;
-  rel?: string;
-  disabled?: boolean;
-  'aria-label'?: string;
-};
-function Hover({ as = 'div', base, hover, children, ...rest }: HoverProps) {
-  const [h, setH] = useState(false);
-  const Tag = as as React.ElementType;
-  return (
-    <Tag {...rest} style={{ ...base, ...(h ? hover : undefined) }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
-      {children}
-    </Tag>
-  );
-}
+import { Hover } from "@/components/Hover";
 
 const DEMOS = ['facebook/react', 'vercel/next.js', 'Subhooo5/streakforge'];
 

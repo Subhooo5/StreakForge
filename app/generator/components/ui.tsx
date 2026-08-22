@@ -2,27 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { fallbackCopyToClipboard } from '@/utils/clipboard';
-
-type HoverProps = React.HTMLAttributes<HTMLElement> & {
-  as?: React.ElementType;
-  base?: React.CSSProperties;
-  hover?: React.CSSProperties;
-  href?: string;
-  target?: string;
-  rel?: string;
-  title?: string;
-  'aria-label'?: string;
-};
-
-export function Hover({ as = 'div', base, hover, children, ...rest }: HoverProps) {
-  const [h, setH] = useState(false);
-  const Tag = as as React.ElementType;
-  return (
-    <Tag {...rest} style={{ ...base, ...(h ? hover : undefined) }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
-      {children}
-    </Tag>
-  );
-}
+import { Hover } from '@/components/Hover';
+export { Hover };
 
 export function FieldLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
