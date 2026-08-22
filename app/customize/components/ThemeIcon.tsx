@@ -1,17 +1,5 @@
 "use client";
 
-/**
- * Concept icons for the Theme Preset grid.
- *
- * One coherent visual language across the whole grid: every glyph is drawn on
- * the same 24×24 canvas as round-capped 1.6px strokes in `currentColor`, with
- * no fills and no mixed illustration styles — so 33 different palettes still
- * read as one set. Each glyph illustrates its theme's name or concept (moon
- * for Dark, sun for Light, pine for Forest, …), and the light variants of a
- * theme reuse their dark sibling's glyph plus a small sun mark, so the pairs
- * (Nord / Nord Light, Gruvbox / Gruvbox Light) stay recognisably related.
- */
-
 export type ThemeIconName =
   | "spark"
   | "moon"
@@ -47,7 +35,6 @@ export type ThemeIconName =
   | "chakra"
   | "dune";
 
-/** Path data per glyph — `d` strings only, so every icon shares one <svg>. */
 const GLYPHS: Record<ThemeIconName, string[]> = {
   spark: ["M12 3.2 13.7 10.3 20.8 12 13.7 13.7 12 20.8 10.3 13.7 3.2 12 10.3 10.3Z"],
   moon: ["M19.4 14.8A8.2 8.2 0 1 1 9.2 4.6a6.6 6.6 0 0 0 10.2 10.2Z"],
@@ -184,10 +171,6 @@ const GLYPHS: Record<ThemeIconName, string[]> = {
   ],
 };
 
-/**
- * @param name which glyph to draw
- * @param size rendered px (square)
- */
 export default function ThemeIcon({ name, size = 20 }: { name: ThemeIconName; size?: number }) {
   return (
     <svg

@@ -3,15 +3,6 @@
 import ThemeIcon from "./ThemeIcon";
 import type { ThemePreset } from "../data/themes";
 
-/**
- * One swatch in the Theme Preset grid.
- *
- * The tile paints the theme's real badge background and draws its concept
- * icon in the theme's real accent, so the grid previews the palette rather
- * than describing it. Selection is deliberately loud — an accent ring, a
- * coloured glow and a check mark — because the tiles themselves are dark
- * squares that a subtle border would not distinguish.
- */
 export default function ThemeTile({
   preset,
   selected,

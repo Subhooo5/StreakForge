@@ -1,23 +1,10 @@
-// Badge theme palettes for the Customization Studio's Theme Preset grid.
-//
-// These mirror the badge theme registry in `lib/svg/themes.ts`, which is the
-// source of truth the SVG generator reads — `theme=<key>` on `/api/streak`
-// resolves against exactly these keys. The values are duplicated here rather
-// than imported because `lib/` is backend-only (see CLAUDE.md); this file is
-// page data and lives with the page. If a theme is added, renamed or
-// recoloured in `lib/svg/themes.ts`, mirror the change here.
-//
-// The two virtual themes the badge also accepts — `auto` and `random` — are
-// deliberately NOT listed: the grid shows concrete palettes only.
-
 import type { ThemeIconName } from "../components/ThemeIcon";
 
+// Mirrors the lib/svg/themes.ts registry
+
 export interface ThemePreset {
-  /** `theme=` value sent to `/api/streak`. */
   key: string;
-  /** Human label under the swatch. */
   label: string;
-  /** Concept icon drawn on the swatch. */
   icon: ThemeIconName;
   bg: string;
   text: string;
@@ -64,7 +51,6 @@ export const THEME_KEYS = THEME_PRESETS.map((t) => t.key);
 
 const BY_KEY = new Map(THEME_PRESETS.map((t) => [t.key, t]));
 
-/** The preset for `key`, falling back to the default selection (`dark`). */
 export function themePreset(key: string): ThemePreset {
   return BY_KEY.get(key) ?? BY_KEY.get("dark")!;
 }

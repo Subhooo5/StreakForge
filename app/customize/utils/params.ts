@@ -1,20 +1,7 @@
-// Translation between the studio's state object, the page URL and the badge URL.
-//
-// Both URLs use the SAME parameter names, because both mean the same thing:
-// `/customize?user=x&theme=neon&radius=20` configures the studio and
-// `/api/streak?user=x&theme=neon&radius=20` renders exactly that badge. One
-// encoder therefore drives the address bar, the export snippets, the Active
-// Parameters chips and the live preview — they cannot disagree.
-//
-// Values equal to their default are omitted (the badge applies the same
-// defaults server-side), so an untouched studio produces the very same badge
-// URL the Home page uses: `?user=<handle>&theme=dark`.
-
 import { DEFAULT_OPTIONS, FONTS, LANGUAGES, SIZES, SPEEDS, TIMEZONES, VIEW_MODES } from "../types";
 import type { CustomizeOptions } from "../types";
 import { THEME_KEYS } from "../data/themes";
 
-/** Query params this page owns, in the order they appear in the URL. */
 export const PARAM_KEYS = [
   "user",
   "theme",
@@ -36,7 +23,6 @@ const RADIUS_MAX = 50;
 
 const values = (options: { value: string }[]) => options.map((o) => o.value);
 
-/** Keeps `raw` only when it is one of `allowed`, else falls back. */
 function pick(raw: string | undefined, allowed: string[], fallback: string): string {
   return raw !== undefined && allowed.includes(raw) ? raw : fallback;
 }
@@ -44,8 +30,6 @@ function pick(raw: string | undefined, allowed: string[], fallback: string): str
 function pickYear(raw: string | undefined, currentYear: number): string {
   if (!raw || !/^\d{4}$/.test(raw)) return DEFAULT_OPTIONS.year;
   const year = Number(raw);
-  // Anything outside the offered range (or the current year, which IS the
-  // default) collapses back to the default rolling window.
   if (year >= currentYear || year < currentYear - 10) return DEFAULT_OPTIONS.year;
   return raw;
 }
@@ -56,11 +40,6 @@ function pickRadius(raw: string | undefined): number {
   return Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, Math.round(parsed)));
 }
 
-/**
- * Rebuilds the state object from URL params, sanitising every field. Unknown
- * or malformed values fall back to their default rather than reaching the
- * badge route, so a hand-edited URL can never wedge the page.
- */
 export function fromParams(params: Record<string, string>, currentYear: number): CustomizeOptions {
   return {
     user: (params.user ?? "").trim(),
@@ -79,13 +58,6 @@ export function fromParams(params: Record<string, string>, currentYear: number):
   };
 }
 
-/**
- * The non-default half of the state, as query params.
- *
- * `theme` is always emitted even at its default: it is the one setting a
- * pasted snippet should state outright, and it keeps the generated URL
- * identical to the `?user=…&theme=dark` form the Home page embeds.
- */
 export function toParams(options: CustomizeOptions): Record<string, string> {
   const out: Record<string, string> = {};
   const user = options.user.trim();
@@ -105,7 +77,6 @@ export function toParams(options: CustomizeOptions): Record<string, string> {
   return out;
 }
 
-/** `toParams` as a query string, in `PARAM_KEYS` order. */
 export function toQuery(options: CustomizeOptions): string {
   const params = toParams(options);
   const search = new URLSearchParams();
@@ -115,7 +86,6 @@ export function toQuery(options: CustomizeOptions): string {
   return search.toString();
 }
 
-/** The chips under "Active Parameters", in URL order. */
 export function activeParams(options: CustomizeOptions): { k: string; v: string }[] {
   const params = toParams(options);
   return PARAM_KEYS.filter((key) => params[key] !== undefined).map((key) => ({ k: key, v: params[key] }));

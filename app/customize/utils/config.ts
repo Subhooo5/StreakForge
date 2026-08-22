@@ -1,15 +1,7 @@
-// Export / import of a studio configuration as a small versioned JSON file.
-//
-// The file carries the state object itself (not a URL), so it stays readable
-// and diffable. On the way back in, every field is pushed through the same
-// sanitiser the URL uses — an edited or hand-written file can only ever
-// produce a valid configuration.
-
 import { DEFAULT_OPTIONS } from "../types";
 import type { CustomizeOptions } from "../types";
 import { fromParams } from "./params";
 
-/** Bumped only if the shape changes in a way older files cannot satisfy. */
 export const CONFIG_VERSION = 1 as const;
 
 export const CONFIG_FILENAME = "streakforge-config.json";
@@ -19,13 +11,11 @@ export interface ConfigFile {
   config: CustomizeOptions;
 }
 
-/** Serialised form of the current state, pretty-printed for humans. */
 export function serializeConfig(options: CustomizeOptions): string {
   const payload: ConfigFile = { version: CONFIG_VERSION, config: options };
   return JSON.stringify(payload, null, 2);
 }
 
-/** Triggers a browser download of the current configuration. */
 export function downloadConfig(options: CustomizeOptions): void {
   const blob = new Blob([serializeConfig(options)], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -38,12 +28,6 @@ export function downloadConfig(options: CustomizeOptions): void {
 
 export type ParseResult = { ok: true; options: CustomizeOptions } | { ok: false; error: string };
 
-/**
- * Parses a configuration file's text.
- *
- * @param text     raw file contents
- * @param currentYear year the Sync Year field is validated against
- */
 export function parseConfig(text: string, currentYear: number): ParseResult {
   let parsed: unknown;
   try {

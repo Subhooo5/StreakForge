@@ -8,38 +8,22 @@ import ToggleRow from "./components/ToggleRow";
 import SelectField from "./components/SelectField";
 import ThemeTile from "./components/ThemeTile";
 import { THEME_PRESETS, themePreset } from "./data/themes";
-import { useBadgeSvg } from "./data/useBadgeSvg";
+import { useBadgeSvg } from "./hooks/useBadgeSvg";
 import { EXPORT_FORMATS, FONTS, LANGUAGES, PREVIEW_BGS, SIZES, SPEEDS, TIMEZONES, VIEW_MODES, syncYearOptions } from "./types";
 import type { CustomizeOptions, ExportFormat, PreviewBg } from "./types";
 import { PARAM_KEYS, activeParams, fromParams, toParams, toQuery } from "./utils/params";
 import { PLACEHOLDER_USER, exportSnippet } from "./utils/snippets";
 import { downloadConfig, parseConfig } from "./utils/config";
 
-// ---------- constants ----------
-// DC `data-props` editor knob → component constant (default from the export).
 const GRID_REACTIVITY = 1.2;
 
-// Every studio setting except the handle lives in the URL through
-// `useUrlParams`; the handle uses `useUrlBackedState` so typing it leaves one
-// history entry rather than one per keystroke (the app-wide convention).
 const OPTION_KEYS: string[] = PARAM_KEYS.filter((key) => key !== 'user');
 
-/**
- * Resting border for the page's hoverable controls.
- *
- * Hover swaps these to `var(--accent)` (electric blue in light, green in dark).
- * The reset MUST name this token rather than clearing the property: the inline
- * `border: 1px solid var(--line)` shorthand writes a border-color longhand, and
- * setting that longhand to '' removes it entirely, so the border falls back to
- * its CSS initial value — `currentColor`, i.e. a white outline in dark mode
- * that lingers after the pointer leaves.
- */
+// Never reset to '' — falls back to currentColor
 const RESTING_BORDER = 'var(--line)';
 
-/** How long a radius drag settles before it becomes a history entry. */
 const RADIUS_COMMIT_MS = 400;
 
-// ---------- Logo SVGs ----------
 const Logo = (
   <svg viewBox="0 0 545 150" xmlns="http://www.w3.org/2000/svg" style={{ height: '41px', width: '150px', display: 'block' }}>
     <defs><radialGradient id="sparkCN" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#FFE8B8" /><stop offset="45%" stopColor="#FFB627" /><stop offset="100%" stopColor="#FF7A1A" stopOpacity={0} /></radialGradient></defs>
@@ -76,18 +60,11 @@ const FooterLogo = (
   </svg>
 );
 
-// ---------- component ----------
 export default function CustomizeClient() {
   const [theme, toggleTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
-  // Mirrored into `?user=` so a configured badge is linkable.
   const [username, setUsername] = useUrlBackedState('user');
-  // …and every other setting lives in the URL too, so the address bar *is* the
-  // studio's state: a link restores the exact badge, and Back steps back
-  // through the settings that were changed.
   const [params, writeParams] = useUrlParams(OPTION_KEYS);
-  // A radius drag is one gesture: the draft drives the preview immediately and
-  // only the settled value becomes a history entry.
   const [radiusDraft, setRadiusDraft] = useState<number | null>(null);
   const [exportFmt, setExportFmt] = useState<ExportFormat>('markdown');
   const [previewBg, setPreviewBg] = useState<PreviewBg>('dark');
@@ -218,17 +195,14 @@ export default function CustomizeClient() {
     ? <svg width={18} height={18} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} fill="none"><circle cx={12} cy={12} r={4.2} /><path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M19.4 4.6l-1.7 1.7M6.3 17.7l-1.7 1.7" strokeLinecap="round" /></svg>
     : <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" /></svg>;
 
-  // ── state derived from the URL ──────────────────────────────────────────
   const currentYear = new Date().getFullYear();
   const options = useMemo(() => {
     const fromUrl = fromParams({ ...params, user: username }, currentYear);
     return radiusDraft === null ? fromUrl : { ...fromUrl, radius: radiusDraft };
   }, [params, username, currentYear, radiusDraft]);
 
-  /** Writes a whole settings object back to the URL (one history entry). */
   const applyOptions = useCallback((next: CustomizeOptions) => {
     const written = toParams(next);
-    // `user` belongs to useUrlBackedState — leave it out of this write.
     delete written.user;
     writeParams(written);
   }, [writeParams]);
@@ -242,8 +216,6 @@ export default function CustomizeClient() {
 
   const seg = (cur: string, val: string) => ({ activeBg: cur === val ? 'var(--accent)' : 'transparent', activeColor: cur === val ? '#fff' : 'var(--soft)' });
 
-  // One query string drives the live preview, the export snippets and the
-  // Active Parameters chips, so the three can never disagree.
   const query = toQuery(options);
   const badge = useBadgeSvg(query, hasUser);
 
@@ -255,9 +227,6 @@ export default function CustomizeClient() {
 
   const yearOptions = syncYearOptions(currentYear);
 
-  // The badge paints its own background, so the frame behind it simulates the
-  // page the badge will be embedded in: GitHub's dark canvas, a light one, or
-  // a checkerboard that shows exactly what "Hide background" leaves behind.
   const previewSurface = previewBg === 'light'
     ? '#fff'
     : previewBg === 'grid'
@@ -290,7 +259,6 @@ export default function CustomizeClient() {
   };
 
   const downloadSvg = () => {
-    // The exact bytes on screen — same pipeline, same file.
     if (!badge.svg) return;
     const blob = new Blob([badge.svg], { type: 'image/svg+xml' });
     const a = document.createElement('a');
@@ -323,7 +291,7 @@ export default function CustomizeClient() {
 
       <div style={{ position: 'relative', zIndex: 2 }}>
 
-        {/* TICKER */}
+        {}
         <div style={{ width: '100%', borderBottom: '1px solid var(--line2)', background: 'var(--surface)', backdropFilter: 'blur(10px)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', height: '34px', width: 'max-content', animation: 'sf-ticker 46s linear infinite' }}>
             {[0, 1].map(i => (
@@ -337,7 +305,7 @@ export default function CustomizeClient() {
           </div>
         </div>
 
-        {/* NAV */}
+        {}
         <header style={{ position: 'sticky', top: 0, zIndex: 40 }}>
           <div style={{ background: 'var(--surface)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--line2)' }}>
             <nav style={{ maxWidth: '1240px', margin: '0 auto', padding: '14px clamp(16px,4vw,40px)', display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -375,7 +343,7 @@ export default function CustomizeClient() {
 
         <main id="top" style={{ maxWidth: '1320px', margin: '0 auto', padding: 'clamp(28px,4vw,52px) clamp(16px,4vw,40px) 0' }}>
 
-          {/* HEADER A1 */}
+          {}
           <div data-reveal style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <a href="/" className="ui" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13.5px', fontWeight: 500, color: 'var(--soft)', transition: 'color .2s' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')} onMouseLeave={e => (e.currentTarget.style.color = '')}>
               <svg width={15} height={15} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6}><path d="M10 3 5 8l5 5" /></svg>Back to Home
@@ -386,10 +354,10 @@ export default function CustomizeClient() {
           <h1 data-reveal style={{ margin: '20px 0 0', fontWeight: 500, letterSpacing: '-.025em', lineHeight: 1.02, fontSize: 'clamp(36px,5.6vw,62px)' }}>Dial in your <span style={{ background: 'linear-gradient(100deg,var(--accent-ink),var(--accent))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>monolith</span>.</h1>
           <p data-reveal style={{ maxWidth: '560px', margin: '18px 0 0', fontSize: 'clamp(16px,2vw,19px)', lineHeight: 1.6, color: 'var(--soft)', transitionDelay: '.06s' }}>Every control updates the preview instantly. When it looks right, grab the export snippet — paste, ship, done.</p>
 
-          {/* 3-COLUMN GRID */}
+          {}
           <div className="studio-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px,360px) 1fr minmax(280px,340px)', gap: '18px', marginTop: 'clamp(28px,4vw,44px)' }}>
 
-            {/* CONTROLS A2 */}
+            {}
             <div data-reveal style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(18px,2.4vw,26px)', boxShadow: 'var(--shadow)', alignSelf: 'start' }}>
               <div className="ui" style={{ fontSize: '12px', letterSpacing: '.12em', color: 'var(--accent-ink)', textTransform: 'uppercase', fontWeight: 700 }}>Customization Studio</div>
 
@@ -445,14 +413,12 @@ export default function CustomizeClient() {
               </SelectField>
             </div>
 
-            {/* LIVE PREVIEW A3 */}
+            {}
             <div data-reveal style={{ alignSelf: 'start', transitionDelay: '.06s' }}>
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(18px,2.4vw,26px)', boxShadow: 'var(--shadow)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div className="ui" style={{ fontSize: '12px', letterSpacing: '.12em', color: 'var(--accent-ink)', textTransform: 'uppercase', fontWeight: 700 }}>Live Preview</div>
-                  {/* The badge paints its own background, so this switches the
-                      surface it is previewed against — the only place this
-                      control exists. */}
+                  {}
                   <div className="ui" style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '4px', border: '1px solid var(--line)', borderRadius: '12px', background: 'var(--surface2)' }}>
                     <span style={{ fontSize: '10px', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--faint)', fontWeight: 700, padding: '0 8px' }}>BG Simulator</span>
                     {PREVIEW_BGS.map(b => (
@@ -488,7 +454,7 @@ export default function CustomizeClient() {
                 <div className="ui" style={{ textAlign: 'center', marginTop: '14px', fontSize: '12px', color: 'var(--faint)' }}>{previewHint}</div>
               </div>
 
-              {/* export */}
+              {}
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
                 <div className="ui" style={{ display: 'flex', gap: '2px', padding: '5px', border: '1px solid var(--line)', borderRadius: '13px', background: 'var(--surface)', flex: 1, minWidth: '240px' }}>
                   {EXPORT_FORMATS.map(f => {
@@ -523,8 +489,7 @@ export default function CustomizeClient() {
                 <div className="ui" style={{ marginTop: '10px', padding: '10px 14px', border: '1px solid color-mix(in srgb,var(--bad) 40%,var(--line))', borderRadius: '11px', background: 'color-mix(in srgb,var(--bad) 10%,transparent)', fontSize: '13px', color: 'var(--bad)' }}>{configError}</div>
               )}
 
-              {/* Raw shows the snippet itself; Preview renders what that
-                  snippet produces once GitHub has embedded it. */}
+              {}
               {exportFmt === 'markdown' && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
                   <div className="ui" style={{ display: 'flex', gap: '2px', padding: '4px', border: '1px solid var(--line)', borderRadius: '11px', background: 'var(--surface)' }}>
@@ -548,9 +513,7 @@ export default function CustomizeClient() {
                       <svg width={13} height={13} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x={5} y={5} width={8} height={8} rx={1.6} /><path d="M3 11V4a1 1 0 0 1 1-1h7" /></svg>
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
-                    {/* Clears the absolutely-positioned Copy button (its width at the
-                        longest label, "Copied!", plus a gutter) so a long single-line
-                        snippet wraps beside the button instead of running under it. */}
+                    {}
                     <pre className="mono" style={{ margin: 0, paddingRight: '104px', fontSize: '12.5px', lineHeight: 1.7, color: 'var(--accent-ink)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{snippet}</pre>
                   </>
                 )}
@@ -571,7 +534,7 @@ export default function CustomizeClient() {
               </div>
             </div>
 
-            {/* ADVANCED A4 */}
+            {}
             <div data-reveal style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(18px,2.4vw,26px)', boxShadow: 'var(--shadow)', alignSelf: 'start', transitionDelay: '.12s' }}>
               <div className="ui" style={{ fontSize: '12px', letterSpacing: '.12em', color: 'var(--accent-ink)', textTransform: 'uppercase', fontWeight: 700 }}>Advanced Settings</div>
 
@@ -598,10 +561,9 @@ export default function CustomizeClient() {
               </SelectField>
             </div>
 
-
           </div>
 
-          {/* FOOTER A5 */}
+          {}
           <footer className="ui" style={{ margin: '0 auto', padding: 'clamp(40px,6vw,80px) 0 40px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: '30px' }}>
               <div style={{ minWidth: '180px' }}>
