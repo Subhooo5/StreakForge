@@ -1,15 +1,10 @@
-// PR Insights mappers: live `/api/dashboard/pr` payload -> the shapes
-// `DashboardClient.tsx` renders. Pure functions only, no fetching.
+import type { DonutSegment, PRData, PRHighlight, PRInsightsPayload, PRRepo, PRReview, PRSizeBar, PRStat } from "../types";
 
-import type { DonutSegment, PRData, PRHighlight, PRInsightsPayload, PRRepo, PRReview, PRSizeBar, PRStat } from "./types";
-
-/** Hours -> "0.2 hrs" / "112.3 hrs", the unit the PR metric cards use. */
 function hrs(hours: number): string {
   if (!Number.isFinite(hours) || hours <= 0) return "0.0";
   return hours.toFixed(1);
 }
 
-/** The API returns raw percentages (83.0985…); cards show one decimal. */
 function pct(value: number): string {
   if (!Number.isFinite(value)) return "0";
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -51,7 +46,6 @@ export function toPRData(data: PRInsightsPayload, range: string): PRData {
     },
   ];
 
-  // A zero slice would collapse the arc, so keep a hairline for empty states.
   const donut: DonutSegment[] = [
     { v: data.mergedPRs || 0.001, color: "var(--pc)" },
     { v: data.openPRs || 0.001, color: "var(--pb)" },

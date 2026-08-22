@@ -1,17 +1,7 @@
-// View-facing data shapes for the Dashboard page.
-//
-// These are the shapes `DashboardClient.tsx` renders. They are produced by the
-// mappers in this folder from the live `/api/dashboard*` payloads, so the ported
-// markup never has to change when the backend shape moves.
-//
-// See CLAUDE.md -> DATA + BACKEND RULES.
-
 import type { ActivityData, AIInsight, CommitClockData, DeploymentData, HallOfFameAward, LanguageData, RepoActivityInfo, Repository, UserProfile, UserStats } from "@/types/dashboard";
 import type { GraphLink, GraphNode as ApiGraphNode } from "@/types";
 import type { CIAnalyticsData } from "@/types/ci-analytics";
 import type { PRInsightData } from "@/services/github/pr-insights";
-
-/* ── API payloads ──────────────────────────────────────────────────────── */
 
 export interface DashboardOverviewPayload {
   user: string;
@@ -32,15 +22,11 @@ export interface DashboardOverviewPayload {
 export type CIAnalyticsPayload = CIAnalyticsData & { user: string };
 export type PRInsightsPayload = PRInsightData & { user: string };
 
-/* ── Profile / header ──────────────────────────────────────────────────── */
-
 export interface Profile {
   user: string;
   handle: string;
   name: string;
-  /** Empty when a real avatar image is available (the image is the background). */
   initial: string;
-  /** A CSS `background` value — a real avatar image, or a neutral fallback. */
   avatar: string;
   bio: string;
   loc: string;
@@ -57,8 +43,6 @@ export interface Profile {
   stars: number;
   contrib: number;
 }
-
-/* ── Overview widgets ──────────────────────────────────────────────────── */
 
 export interface Deployment {
   key: number;
@@ -110,7 +94,6 @@ export interface HistData {
   yearly: YearlySummary[];
   popular: PopularRepo[];
   inactive: InactiveRepo[];
-  /** True when an older window has no contribution data behind it. */
   atOldestWindow: boolean;
 }
 
@@ -139,15 +122,11 @@ export interface DonutSegment {
 }
 
 export interface ActivityBucket {
-  /** Inclusive start of the bucket window (YYYY-MM-DD). */
   startDate: string;
-  /** Inclusive end of the bucket window (YYYY-MM-DD). */
   endDate: string;
   days: number;
   count: number;
 }
-
-/* ── CI Analytics tab ──────────────────────────────────────────────────── */
 
 export interface CIStat {
   key: number;
@@ -203,8 +182,6 @@ export interface CIData {
   failed: number;
   cancelled: number;
 }
-
-/* ── PR Insights tab ───────────────────────────────────────────────────── */
 
 export interface PRStat {
   key: number;
@@ -265,8 +242,6 @@ export interface PRData {
   repos: PRRepo[];
   sizes: PRSizeBar[];
 }
-
-/* ── Async wrapper ─────────────────────────────────────────────────────── */
 
 export interface AsyncResource<T> {
   data: T | null;

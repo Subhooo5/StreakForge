@@ -1,23 +1,11 @@
 "use client";
 
-// Isometric 3D contribution city for the Activity Landscape.
-//
-// Geometry and animation are adapted from the source repo's
-// `components/dashboard/ContributionCity3D.tsx`: a Canvas2D renderer using
-// painter's-algorithm depth sorting (no Three.js), one cube per day laid out
-// col = week / row = weekday. The palette and surrounding chrome stay on
-// StreakForge's existing city colours.
-//
-// Canvas (not SVG) is required here: the Time-Lapse export records the live
-// surface via `captureStream()` + MediaRecorder, which only works on a canvas.
-// The whole export path is client-side — no server rendering, so it cannot
-// become a concurrency bottleneck.
+// Canvas required: Time-Lapse export uses captureStream
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Pause, Play, RotateCcw } from "lucide-react";
 import type { ActivityData } from "@/types/dashboard";
 
-/** StreakForge city palette — unchanged from the previous SVG renderer. */
 const C_TOP = "#bcd6ff";
 const C_BASE_HI = "#6f9bf2";
 const C_BASE_LO = "#2f63d8";
@@ -29,7 +17,6 @@ const STAGE_TOP = "#10182b";
 const STAGE_BOTTOM = "#070a12";
 
 const ROWS = 7;
-/** 14 weeks — matches the source's default window. */
 const DEFAULT_DAYS = 98;
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -75,12 +62,10 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
   const [isDragging, setIsDragging] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
-  // Replay My Year
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayIndex, setReplayIndex] = useState<number | null>(null);
   const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Time-Lapse
   const [timeLapse, setTimeLapse] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackIndex, setPlaybackIndex] = useState(days);
@@ -94,14 +79,12 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
   const totalDays = recent.length;
   const maxIndex = Math.min(days, recent.length);
 
-  /** Month caption for whichever frame is currently on screen. */
   const currentMonth = useMemo(() => {
     const idx = isReplaying && replayIndex !== null ? replayIndex : playbackIndex;
     const day = recent[Math.min(Math.max(idx - 1, 0), recent.length - 1)];
     return day ? monthLabel(day.date) : "";
   }, [isReplaying, replayIndex, playbackIndex, recent]);
 
-  // ── Replay driver ──────────────────────────────────────────────────────────
   const stopReplay = useCallback(() => {
     if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
     setIsReplaying(false);
@@ -117,7 +100,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
   useEffect(() => {
     if (!isReplaying || replayIndex === null) return;
     if (replayIndex >= totalDays) {
-      // Hold the finished skyline briefly, then hand the controls back.
       replayTimerRef.current = setTimeout(() => stopReplay(), 800);
       return;
     }
@@ -128,7 +110,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     };
   }, [isReplaying, replayIndex, totalDays, stopReplay]);
 
-  // ── Time-Lapse driver ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!timeLapse) {
       setPlaybackIndex(days);
@@ -164,7 +145,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     [],
   );
 
-  // ── Export (client-side only) ──────────────────────────────────────────────
   const handleExport = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -176,7 +156,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     try {
       const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(60);
 
-      // Prefer WebM; Safari only offers MP4, so match the extension to reality.
       let mimeType = "";
       for (const candidate of ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"]) {
         if (typeof MediaRecorder.isTypeSupported !== "function" || MediaRecorder.isTypeSupported(candidate)) {
@@ -212,7 +191,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
       recorder.start();
       mediaRecorderRef.current = recorder;
       setIsExporting(true);
-      // Rewind and play so the recording captures the whole build-up.
       setPlaybackIndex(7);
       setIsPlaying(true);
     } catch {
@@ -221,14 +199,12 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     }
   }, []);
 
-  // Close the recording once playback has run to the end.
   useEffect(() => {
     if (!isExporting || isPlaying || playbackIndex < maxIndex) return;
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state !== "inactive") recorder.stop();
   }, [isExporting, isPlaying, playbackIndex, maxIndex]);
 
-  // ── Cube specs ─────────────────────────────────────────────────────────────
   const cubes = useCallback((): CubeSpec[] => {
     const max = Math.max(...recent.map((d) => d.count), 1);
     const visibleData = timeLapse ? recent.slice(0, playbackIndex) : recent;
@@ -244,7 +220,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     }));
   }, [recent, timeLapse, playbackIndex, replayIndex]);
 
-  // ── Draw ───────────────────────────────────────────────────────────────────
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -254,7 +229,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     const H = canvas.height;
     ctx.clearRect(0, 0, W, H);
 
-    // Stage gradient painted onto the canvas so the export carries it too.
     const bg = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, Math.max(W, H) * 1.1);
     bg.addColorStop(0, STAGE_TOP);
     bg.addColorStop(0.7, STAGE_BOTTOM);
@@ -287,7 +261,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
       return { cx: offsetX + rx * tileW, cy: offsetY - ry2 * tileH - rz2 * (tileH * 0.1) + gridH * 0.25 };
     };
 
-    // Painter's algorithm — back to front under the current orbit.
     const sorted = [...specs].sort((a, b) => a.col * sinY + a.row * cosY - (b.col * sinY + b.row * cosY));
     hoverDataRef.current = [];
 
@@ -346,7 +319,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
       }
     }
 
-    // Grid floor
     ctx.globalAlpha = 0.5;
     ctx.strokeStyle = GRID_LINE;
     ctx.lineWidth = 0.8;
@@ -369,7 +341,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     ctx.globalAlpha = 1;
   }, [cubes, recent.length]);
 
-  // ── Sizing + redraw ────────────────────────────────────────────────────────
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -394,7 +365,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     draw();
   }, [draw]);
 
-  // ── Pointer / wheel ────────────────────────────────────────────────────────
   const canvasScale = () => {
     const canvas = canvasRef.current;
     if (!canvas) return 1;
@@ -439,7 +409,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
 
   const onPointerUp = () => setIsDragging(false);
 
-  // Non-passive so preventDefault actually stops the page scrolling.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -465,7 +434,6 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
     lastPinchRef.current = dist;
   };
 
-  // ── Chrome (StreakForge stage styling) ─────────────────────────────────────
   const tabStyle: React.CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
@@ -513,7 +481,7 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
         />
       </div>
 
-      {/* Controls — Replay and Time-Lapse are mutually exclusive. */}
+      {}
       <div className="ui" style={{ position: "absolute", left: "16px", top: "16px", zIndex: 2, display: "flex", alignItems: "center", gap: "11px" }}>
         {!timeLapse && (
           <button
@@ -541,7 +509,7 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
           </button>
         )}
 
-        {/* Live month caption while the towers are generating. */}
+        {}
         {isReplaying && (
           <span className="mono" style={{ fontSize: "12.5px", fontWeight: 600, color: "#9cc0ff", letterSpacing: ".02em" }}>
             {currentMonth}
@@ -563,7 +531,7 @@ export default function ContributionCity({ data, days = DEFAULT_DAYS }: Contribu
           </button>
         )}
 
-        {/* Time-Lapse control tab: play/pause · restart · month · export */}
+        {}
         {timeLapse && (
           <div style={tabStyle}>
             <button

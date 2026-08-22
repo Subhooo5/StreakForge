@@ -1,9 +1,5 @@
-// CI Analytics mappers: live `/api/dashboard/ci` payload -> the shapes
-// `DashboardClient.tsx` renders. Pure functions only, no fetching.
+import type { CIAnalyticsPayload, CIData, CIHealth, CIHighlight, CIRun, CIStat, DonutSegment } from "../types";
 
-import type { CIAnalyticsPayload, CIData, CIHealth, CIHighlight, CIRun, CIStat, DonutSegment } from "./types";
-
-/** Seconds -> "8s" / "6m 59s" / "1h 4m", matching the run-duration columns. */
 export function formatDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return "0s";
   if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -102,7 +98,6 @@ export function toCIData(data: CIAnalyticsPayload, range: string): CIData {
     },
   ];
 
-  // A zero slice would collapse the arc, so keep a hairline for empty states.
   const donut: DonutSegment[] = [
     { v: success || 0.001, color: "var(--pc)" },
     { v: failed || 0.001, color: "var(--pd)" },

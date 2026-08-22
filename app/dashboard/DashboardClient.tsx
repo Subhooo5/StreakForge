@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
-import { useDashboardUser } from "./data/useDashboardUser";
-import { useCIAnalytics, useDashboardOverview, usePRInsights, useRefreshNonce } from "./data/useDashboardData";
+import { useDashboardUser } from "./hooks/useDashboardUser";
+import { useCIAnalytics, useDashboardOverview, usePRInsights, useRefreshNonce } from "./hooks/useDashboardData";
 import { RANGE_DAYS, bucketLabel, toActivityBuckets, toFame, toGraphNodes, toHeatmapGrid, toHist, toLangs, toMiniBars, toProfile } from "./data/overview";
 import ContributionHeatmap from "@/components/ContributionHeatmap";
 import type { HeatmapGrid } from "./data/overview";
 import { toCIData } from "./data/ci";
 import { toPRData } from "./data/pr";
-import type { CIData, GraphNode, HistData, LangSlice, DonutSegment, PRData, Profile } from "./data/types";
+import type { CIData, GraphNode, HistData, LangSlice, DonutSegment, PRData, Profile } from "./types";
 import { resolveDashboardPeriod, shiftDashboardPeriod, type DashboardPeriod } from "@/utils/dashboardPeriod";
 import DeployCard from "./components/DeployCard";
 import FameCard from "./components/FameCard";
@@ -24,10 +24,6 @@ import CIHighlightCard from "./components/CIHighlightCard";
 import PRHighlightCard from "./components/PRHighlightCard";
 import ContributionCity from "./components/ContributionCity";
 
-// Sticky-navbar control styles. Border is declared LONGHAND on purpose: the
-// hover state overrides `borderColor` alone, and mixing that with the `border`
-// shorthand makes React drop the property between renders and kills the
-// transition. Home is the canonical navbar per CLAUDE.md POST-PORT CONVENTIONS.
 const NAV_REPO_BASE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -64,8 +60,6 @@ const NAV_TOGGLE_HOVER: React.CSSProperties = {
   borderColor: "var(--accent)",
 };
 
-// Reproduces the mockup's `style-hover="..."` behaviour with React hover state.
-// `base` styles stay verbatim; `hover` styles are merged on pointer-enter.
 type HoverProps = React.HTMLAttributes<HTMLElement> & {
   as?: React.ElementType;
   base?: React.CSSProperties;
@@ -85,7 +79,6 @@ function Hover({ as = "div", base, hover, children, ...rest }: HoverProps) {
   );
 }
 
-// DC `data-props` editor knob → component constant (default from the export).
 const gridReactivity = 1.2;
 
 type Filters = { Personal: boolean; Contributions: boolean; Forks: boolean };
@@ -123,8 +116,6 @@ function ic(name: string, col?: string) {
   );
 }
 
-// `buildInsights` tags each insight with a lucide-style icon name; map those
-// onto the dashboard's own icon set.
 const INSIGHT_ICON: Record<string, string> = {
   Flame: "fire",
   Code: "code",
@@ -132,8 +123,6 @@ const INSIGHT_ICON: Record<string, string> = {
   Star: "trend",
 };
 
-// Placeholders rendered while the live payload is in flight or unavailable.
-// They keep every widget mounted (so layout/reveal never jumps) at zero values.
 const EMPTY_PROFILE: Profile = {
   user: "",
   handle: "@—",
@@ -226,18 +215,15 @@ export default function DashboardClient() {
   const [inactiveDays, setInactiveDays] = useState(90);
   const [nonce, bump] = useRefreshNonce();
 
-  // ---- live data ----
   const overview = useDashboardOverview(username, nonce);
   const ciRes = useCIAnalytics(username, tab === "CI Analytics", nonce);
   const prRes = usePRInsights(username, tab === "PR Insights", nonce);
 
-  // DOM refs
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLCanvasElement>(null);
   const gRef = useRef<SVGGElement>(null);
   const graphWrapRef = useRef<HTMLDivElement>(null);
 
-  // mutable instance state (non-rendering)
   const panRef = useRef({ x: 0, y: 0, z: 1 });
   const draggingRef = useRef(false);
   const dragRef = useRef({ x: 0, y: 0 });
@@ -247,7 +233,6 @@ export default function DashboardClient() {
   const readGridColorsRef = useRef<(() => void) | null>(null);
   const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ---- pan / drag (window-level) ----
   const applyPan = useCallback(() => {
     if (gRef.current) gRef.current.setAttribute("transform", "translate(" + panRef.current.x + " " + panRef.current.y + ") scale(" + panRef.current.z + ")");
   }, []);
@@ -291,7 +276,6 @@ export default function DashboardClient() {
     applyPan();
   };
 
-  // ---- scroll reveal (initReveal, ported) ----
   const initReveal = useCallback(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -329,7 +313,6 @@ export default function DashboardClient() {
     revealTORef.current = setTimeout(() => els.forEach(reveal), 1200);
   }, []);
 
-  // ---- mount: grid canvas + window drag listeners ----
   useEffect(() => {
     reduceRef.current = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -466,17 +449,14 @@ export default function DashboardClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-read --dot/--dot-hot after a theme change.
   useEffect(() => {
     readGridColorsRef.current?.();
   }, [theme]);
 
-  // Reveal on mount + every tab switch (matches componentDidUpdate tab check).
   useEffect(() => {
     initReveal();
   }, [tab, initReveal]);
 
-  // Wire wheel-zoom on the ecosystem graph (non-passive so preventDefault works).
   useEffect(() => {
     if (tab !== "Overview") return;
     const el = graphWrapRef.current;
@@ -491,7 +471,6 @@ export default function DashboardClient() {
     return () => el.removeEventListener("wheel", handler);
   }, [tab, applyPan]);
 
-  // ---- render-time SVG/markup builders (read state directly) ----
   const smoothPath = (pts: Pt[]) => {
     if (pts.length < 2) return "";
     let d = "M" + pts[0][0] + " " + pts[0][1];
@@ -522,8 +501,6 @@ export default function DashboardClient() {
       off += len;
       return el;
     });
-    // `langs` is empty until the live payload lands (and for users with no
-    // detectable languages), so the centre label falls back to a zero state.
     const top = langs[0];
     return (
       <svg viewBox="0 0 160 160" width="100%" style={{ display: "block" }}>
@@ -578,8 +555,6 @@ export default function DashboardClient() {
     const mx = Math.max(...vals, 1);
     const pts: Pt[] = vals.map((v, i) => [padL + (vals.length < 2 ? 0 : (i / (vals.length - 1)) * pw), padT + (1 - v / mx) * ph]);
     const line = smoothPath(pts);
-    // `vals` is empty while a tab's payload is still loading (and for accounts
-    // with no runs/PRs at all) — draw the axes only rather than indexing pts.
     const area = pts.length > 0 ? line + " L" + pts[pts.length - 1][0].toFixed(1) + " " + (padT + ph) + " L" + padL + " " + (padT + ph) + " Z" : "";
     const grid: React.ReactNode[] = [];
     for (let k = 0; k <= 4; k++) {
@@ -628,12 +603,7 @@ export default function DashboardClient() {
     const vals = days.map((d) => clock.find((c) => c.day === d)?.commits ?? 0);
     const max = Math.max(...vals);
     const min = Math.min(...vals);
-    // The mockup highlights the busiest weekday rather than a fixed spoke.
     const peakIdx = vals.indexOf(max);
-    // Trig results can serialize with a trailing ulp of difference between the
-    // server and client passes (167.9003860993471 vs 167.90038609934712),
-    // which React reports as a hydration mismatch. Pinning every computed
-    // attribute to 3dp makes both passes emit byte-identical strings.
     const r3 = (n: number) => Math.round(n * 1000) / 1000;
     const ticks: React.ReactNode[] = [];
     for (let i = 0; i < 60; i++) {
@@ -682,8 +652,6 @@ export default function DashboardClient() {
     );
   };
 
-  // Cell layout comes from the shared heatmap; only the colour ramp is the
-  // Dashboard's own. Rendered output is unchanged.
   const heatmapEl = (grid: HeatmapGrid) => <ContributionHeatmap grid={grid} showLabels minWidth="770px" colorFor={(l) => (l === 0 ? "var(--line)" : "color-mix(in srgb,var(--accent) " + (l * 20 + 14) + "%,transparent)")} />;
 
   const graphEl = (nodes: GraphNode[]) => {
@@ -746,7 +714,6 @@ export default function DashboardClient() {
     );
   };
 
-  // ---- derived render data (live payload -> view shapes) ----
   const ov = overview.data;
   const p = useMemo(() => (ov ? toProfile(ov) : EMPTY_PROFILE), [ov]);
   const activity = useMemo(() => ov?.activity ?? [], [ov]);
@@ -783,7 +750,6 @@ export default function DashboardClient() {
 
   const ranges = ["1W", "1M", "3M", "1Y"].map((m, i) => ({ key: i, label: m, go: () => setRange(m), ...seg(range, m) }));
 
-  // bars — real contributions (or lines changed) for the selected range
   const buckets = useMemo(() => toActivityBuckets(activity, range), [activity, range]);
   const nb = buckets.length;
   const unit = "contributions";
@@ -821,7 +787,6 @@ export default function DashboardClient() {
   const langs = useMemo(() => (ov ? toLangs(ov) : []), [ov]);
   const donut = donutEl(langs);
 
-  // Daily / weekly / monthly sparklines under the three streak cards.
   const miniA = useMemo(() => toMiniBars(activity, 1), [activity]);
   const miniB = useMemo(() => toMiniBars(activity, 7), [activity]);
   const miniC = useMemo(() => toMiniBars(activity, 30), [activity]);
@@ -880,7 +845,6 @@ export default function DashboardClient() {
   const cityBtnBorder = cityMode ? "transparent" : "color-mix(in srgb,var(--pa) 45%,var(--line))";
   const cityBtnBg = cityMode ? "var(--pa)" : "color-mix(in srgb,var(--pa) 10%,transparent)";
   const cityBtnColor = cityMode ? "#fff" : "var(--pa)";
-  // Surface whichever resource the active tab depends on.
   const activeRes = isCI ? ciRes : isPR ? prRes : overview;
   const statusError = activeRes.error;
   const statusLoading = activeRes.loading && !activeRes.data;
@@ -889,7 +853,6 @@ export default function DashboardClient() {
     try {
       navigator.clipboard.writeText(window.location.href);
     } catch {
-      /* no-op */
     }
     setShared(true);
     if (shareTimerRef.current) clearTimeout(shareTimerRef.current);
@@ -916,7 +879,7 @@ export default function DashboardClient() {
       <canvas ref={gridRef} style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2 }}>
-        {/* TICKER */}
+        {}
         <div style={{ width: "100%", borderBottom: "1px solid var(--line2)", background: "var(--surface)", backdropFilter: "blur(10px)", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", height: "34px", width: "max-content", animation: "sf-ticker 44s linear infinite" }}>
             {[0, 1].map((dup) => (
@@ -938,7 +901,7 @@ export default function DashboardClient() {
           </div>
         </div>
 
-        {/* NAV */}
+        {}
         <header style={{ position: "sticky", top: 0, zIndex: 40 }}>
           <div style={{ background: "var(--surface)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--line2)" }}>
             <nav style={{ maxWidth: "1240px", margin: "0 auto", padding: "14px clamp(16px,4vw,40px)", display: "flex", alignItems: "center", gap: "28px" }}>
@@ -996,7 +959,7 @@ export default function DashboardClient() {
         </header>
 
         <main id="top" data-screen-label="User Dashboard" style={{ maxWidth: "1320px", margin: "0 auto", padding: "clamp(22px,3vw,38px) clamp(16px,4vw,40px) 0" }}>
-          {/* TABS */}
+          {}
           <div className="ui" data-reveal style={{ display: "flex", justifyContent: "center", marginTop: "22px" }}>
             <div style={{ display: "flex", gap: "4px", padding: "5px", border: "1px solid var(--line)", borderRadius: "14px", background: "var(--surface)" }}>
               {tabs.map((t) => (
@@ -1007,8 +970,7 @@ export default function DashboardClient() {
             </div>
           </div>
 
-          {/* Minimal status affordance for the live data layer — the sanctioned
-              exception in CLAUDE.md, using existing tokens only. */}
+          {}
           {(statusError || statusLoading) && (
             <div className="ui" data-reveal style={{ display: "flex", justifyContent: "center", marginTop: "18px" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "9px", padding: "9px 16px", borderRadius: "100px", border: "1px solid " + (statusError ? "color-mix(in srgb,var(--bad) 40%,var(--line))" : "var(--line)"), background: statusError ? "color-mix(in srgb,var(--bad) 10%,transparent)" : "var(--surface)", fontSize: "13px", color: statusError ? "var(--bad)" : "var(--soft)" }}>
@@ -1020,9 +982,9 @@ export default function DashboardClient() {
 
           {isOverview && (
             <>
-              {/* DASHBOARD GRID */}
+              {}
               <div className="dash-grid" data-reveal style={{ display: "grid", gridTemplateColumns: "300px 1fr 300px", gap: "18px", marginTop: "clamp(22px,3vw,36px)" }}>
-                {/* LEFT: PROFILE (A) */}
+                {}
                 <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
                   <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "26px", textAlign: "center", boxShadow: "var(--shadow)" }}>
                     <div style={{ width: "96px", height: "96px", borderRadius: "50%", margin: "0 auto", background: p.avatar, display: "grid", placeItems: "center", fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: "38px", color: "#fff", boxShadow: "0 0 0 4px color-mix(in srgb,var(--pa) 28%,transparent)" }}>{p.initial}</div>
@@ -1100,7 +1062,7 @@ export default function DashboardClient() {
                     </div>
                   </div>
 
-                  {/* AI INSIGHTS */}
+                  {}
                   <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "24px" }}>
                     <div className="ui" style={{ display: "flex", alignItems: "center", gap: "9px", fontSize: "13px", letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 700 }}>
                       <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="var(--pa)" strokeWidth={1.7}>
@@ -1116,7 +1078,7 @@ export default function DashboardClient() {
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                    {/* Production Deployments */}
+                    {}
                     <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "clamp(18px,2.2vw,24px)", boxShadow: "var(--shadow)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "16px", fontWeight: 600, letterSpacing: "-.01em" }}>
                         <span style={{ display: "inline-flex", color: "var(--accent-ink)" }}>
@@ -1136,9 +1098,9 @@ export default function DashboardClient() {
                     </div>
                   </div>
                 </div>
-                {/* CENTER */}
+                {}
                 <div style={{ display: "flex", flexDirection: "column", gap: "18px", minWidth: 0 }}>
-                  {/* ACTIVITY LANDSCAPE */}
+                  {}
                   <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "clamp(18px,2.4vw,26px)", boxShadow: "var(--shadow)" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
                       <div>
@@ -1180,7 +1142,7 @@ export default function DashboardClient() {
                     )}
                   </div>
 
-                  {/* LANGUAGES + CLOCK */}
+                  {}
                   <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
                     <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "24px" }}>
                       <div style={{ fontSize: "18px", fontWeight: 600, letterSpacing: "-.01em" }}>Top Languages</div>
@@ -1206,7 +1168,7 @@ export default function DashboardClient() {
                     </div>
                   </div>
 
-                  {/* HISTORICAL HEATMAP */}
+                  {}
                   <div data-reveal style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "clamp(18px,2.4vw,26px)", boxShadow: "var(--shadow)" }}>
                     <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
                       <div>
@@ -1230,7 +1192,7 @@ export default function DashboardClient() {
                     <div style={{ overflowX: "auto", marginTop: "20px", paddingBottom: "4px" }}>{heatmapEl(heatGrid)}</div>
                   </div>
 
-                  {/* HISTORICAL TREND VIEW */}
+                  {}
                   <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "clamp(18px,2.4vw,26px)", boxShadow: "var(--shadow)", minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "14px", flexWrap: "wrap" }}>
                       <div>
@@ -1358,11 +1320,8 @@ export default function DashboardClient() {
                     </div>
                   </div>
                 </div>
-                {/* RIGHT: STREAK STACK */}
-                {/* The column stretches to the grid row, and the Inactive
-                    Repository Reminder at its foot absorbs whatever height is
-                    left over, so this column's bottom edge lines up with the
-                    Historical Trend View's instead of leaving a gap. */}
+                {}
+                {}
                 <div style={{ display: "flex", flexDirection: "column", gap: "18px", minHeight: 0 }}>
                   <StreakStatCard
                     label="Current Streak"
@@ -1456,15 +1415,7 @@ export default function DashboardClient() {
                           </svg>
                         </Hover>
                       </div>
-                      {/* The list scrolls inside the card so every inactive
-                          repo is reachable however many there are. It is
-                          absolutely positioned so a long list contributes no
-                          intrinsic height — otherwise a user with hundreds of
-                          repos would stretch this column far past the
-                          Historical Trend View instead of scrolling. The
-                          wrapper takes the leftover height from the flex
-                          column; `list-scroll` supplies the thin scrollbar and
-                          its 300px cap is lifted here. */}
+                      {}
                       <div style={{ position: "relative", flex: 1, minHeight: "120px", marginTop: "14px" }}>
                         <div className="list-scroll" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: "9px", maxHeight: "none", overflowY: "auto" }}>
                           {hist.inactive.length === 0 ? (
@@ -1481,7 +1432,7 @@ export default function DashboardClient() {
                 </div>
               </div>
 
-              {/* B) REPOSITORY ECOSYSTEM GRAPH */}
+              {}
               <div data-reveal style={{ marginTop: "clamp(34px,5vw,56px)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
                   <div>
@@ -1573,7 +1524,7 @@ export default function DashboardClient() {
                 </div>
               </div>
 
-              {/* C) HALL OF FAME */}
+              {}
               <div data-reveal style={{ marginTop: "clamp(34px,5vw,56px)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "11px", fontSize: "clamp(22px,3vw,30px)", fontWeight: 600, letterSpacing: "-.02em" }}>
                   <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#d9a323" strokeWidth={1.6}>
@@ -1590,17 +1541,17 @@ export default function DashboardClient() {
               </div>
             </>
           )}
-          {/* CI ANALYTICS TAB */}
+          {}
           {isCI && (
             <div style={{ marginTop: "clamp(22px,3vw,36px)", display: "flex", flexDirection: "column", gap: "18px" }}>
-              {/* B) STAT CARDS */}
+              {}
               <div data-reveal style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: "14px" }}>
                 {ci.stats.map((c) => (
                   <StatCard key={c.key} icon={ic(c.iconName, c.color)} label={c.label} value={c.value} color={c.color} />
                 ))}
               </div>
 
-              {/* C) DONUT + AREA */}
+              {}
               <div className="two-col" data-reveal style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: "18px" }}>
                 <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "24px", boxShadow: "var(--shadow)" }}>
                   <div style={{ fontSize: "18px", fontWeight: 600, letterSpacing: "-.01em" }}>Workflow Status</div>
@@ -1643,14 +1594,14 @@ export default function DashboardClient() {
                 </div>
               </div>
 
-              {/* D) HIGHLIGHT STRIP */}
+              {}
               <div data-reveal style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: "14px" }}>
                 {ci.highlights.map((h) => (
                   <CIHighlightCard key={h.key} icon={ic(h.iconName, h.color)} color={h.color} label={h.label} value={h.value} sub={h.sub} />
                 ))}
               </div>
 
-              {/* E) TABLES */}
+              {}
               <div className="two-col" data-reveal style={{ display: "grid", gridTemplateColumns: "1.25fr 1fr", gap: "18px" }}>
                 <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "clamp(18px,2.2vw,24px)", boxShadow: "var(--shadow)" }}>
                   <div style={{ fontSize: "18px", fontWeight: 600, letterSpacing: "-.01em" }}>Recent Workflow Runs</div>
@@ -1744,10 +1695,10 @@ export default function DashboardClient() {
               </div>
             </div>
           )}
-          {/* PR INSIGHTS TAB */}
+          {}
           {isPR && (
             <div style={{ marginTop: "clamp(22px,3vw,36px)", display: "flex", flexDirection: "column", gap: "18px" }}>
-              {/* A) STAT CARDS */}
+              {}
               <div data-reveal style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: "14px" }}>
                 {pr.stats.map((c) => (
                   <div key={c.key} className="hov-card" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "18px", padding: "22px", boxShadow: "var(--shadow)" }}>
@@ -1769,7 +1720,7 @@ export default function DashboardClient() {
                 ))}
               </div>
 
-              {/* B) AREA + DONUT */}
+              {}
               <div className="two-col" data-reveal style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "18px" }}>
                 <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "24px", boxShadow: "var(--shadow)", minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
@@ -1812,14 +1763,14 @@ export default function DashboardClient() {
                 </div>
               </div>
 
-              {/* C) HIGHLIGHT STRIP */}
+              {}
               <div data-reveal style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: "14px" }}>
                 {pr.highlights.map((h) => (
                   <PRHighlightCard key={h.key} icon={ic(h.iconName, h.color)} color={h.color} label={h.label} metric={h.metric} desc={h.desc} />
                 ))}
               </div>
 
-              {/* D) REVIEW ANALYTICS + REPO TABLE */}
+              {}
               <div className="two-col" data-reveal style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "18px" }}>
                 <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "22px", padding: "clamp(18px,2.2vw,24px)", boxShadow: "var(--shadow)" }}>
                   <div style={{ fontSize: "18px", fontWeight: 600, letterSpacing: "-.01em" }}>Review Analytics</div>
@@ -1918,7 +1869,7 @@ export default function DashboardClient() {
             </div>
           )}
 
-          {/* FOOTER (D) */}
+          {}
           <footer className="ui" style={{ margin: "0 auto", padding: "clamp(40px,6vw,80px) 0 40px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", gap: "30px" }}>
               <div style={{ minWidth: "180px" }}>

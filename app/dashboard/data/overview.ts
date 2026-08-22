@@ -1,15 +1,10 @@
-// Overview-tab mappers: live `/api/dashboard` payload -> the shapes
-// `DashboardClient.tsx` renders. Pure functions only, no fetching.
-
 import { buildHeatmapGrid } from "@/components/ContributionHeatmap";
 import type { HeatmapGrid } from "@/components/ContributionHeatmap";
 import type { ActivityData, HallOfFameAward } from "@/types/dashboard";
 import type { DashboardPeriod } from "@/utils/dashboardPeriod";
-import type { ActivityBucket, DashboardOverviewPayload, Deployment, GraphNode, HistData, InactiveRepo, LangSlice, MonthlySummary, PopularRepo, Profile, YearlySummary } from "./types";
+import type { ActivityBucket, DashboardOverviewPayload, Deployment, GraphNode, HistData, InactiveRepo, LangSlice, MonthlySummary, PopularRepo, Profile, YearlySummary } from "../types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/* ── small formatting helpers ──────────────────────────────────────────── */
 
 const monthShort = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -36,7 +31,6 @@ function parseDay(date: string): Date {
   return new Date(`${date}T00:00:00Z`);
 }
 
-/** "3 days" / "2 months" / "1 year" — the unit the deployment + inactivity copy uses. */
 export function humanizeAgo(fromIso: string, now: number = Date.now()): string {
   const diffDays = Math.max(0, Math.floor((now - new Date(fromIso).getTime()) / DAY_MS));
   if (diffDays < 1) return "today";
@@ -48,8 +42,6 @@ export function humanizeAgo(fromIso: string, now: number = Date.now()): string {
   return years === 1 ? "1 year" : `${years} years`;
 }
 
-/* ── profile ───────────────────────────────────────────────────────────── */
-
 export function toProfile(payload: DashboardOverviewPayload): Profile {
   const { profile, stats } = payload;
   const hasAvatar = !!profile.avatarUrl;
@@ -58,7 +50,6 @@ export function toProfile(payload: DashboardOverviewPayload): Profile {
     user: profile.username,
     handle: `@${profile.username}`,
     name: profile.name,
-    // With a real avatar the image *is* the background, so no initial is drawn.
     initial: hasAvatar ? "" : (profile.name[0] || profile.username[0] || "?").toUpperCase(),
     avatar: hasAvatar ? `url("${profile.avatarUrl}") center/cover no-repeat` : "linear-gradient(135deg,var(--pa),var(--accent))",
     bio: profile.bio,
@@ -78,8 +69,6 @@ export function toProfile(payload: DashboardOverviewPayload): Profile {
   };
 }
 
-/* ── languages ─────────────────────────────────────────────────────────── */
-
 export function toLangs(payload: DashboardOverviewPayload): LangSlice[] {
   const total = payload.languages.reduce((sum, l) => sum + l.percentage, 0) || 1;
   return payload.languages.map((l) => ({
@@ -89,8 +78,6 @@ export function toLangs(payload: DashboardOverviewPayload): LangSlice[] {
     pct: `${l.percentage}%`,
   }));
 }
-
-/* ── ecosystem graph ───────────────────────────────────────────────────── */
 
 const GRAPH_TYPE: Record<string, GraphNode["type"]> = {
   Repo: "Personal",
@@ -104,14 +91,9 @@ const GRAPH_COLOR: Record<GraphNode["type"], string> = {
   Forks: "var(--pe)",
 };
 
-/**
- * Lay the repo nodes out on concentric rings around the centred user node,
- * matching the mockup's orbit geometry but scaling to any repo count.
- */
 export function toGraphNodes(payload: DashboardOverviewPayload): GraphNode[] {
   const repoNodes = payload.graphData.nodes.filter((n) => n.type !== "User");
 
-  // Ring sizes grow outward so a large ecosystem stays inside the 600x460 stage.
   const rings: { count: number; radius: number; offset: number }[] = [
     { count: 10, radius: 92, offset: 0 },
     { count: 12, radius: 150, offset: 0.26 },
@@ -131,7 +113,6 @@ export function toGraphNodes(payload: DashboardOverviewPayload): GraphNode[] {
       }
       seat -= r.count;
     }
-    // Anything past the last ring keeps orbiting the outermost ring.
     const seatCount = ring.count;
     const ang = (seat / seatCount) * Math.PI * 2 + ring.offset;
 
@@ -151,8 +132,6 @@ export function toGraphNodes(payload: DashboardOverviewPayload): GraphNode[] {
 
   return out;
 }
-
-/* ── hall of fame ──────────────────────────────────────────────────────── */
 
 const FAME_STYLE: Record<string, { color: string; iconName: string }> = {
   "Most Popular": { color: "var(--accent-2)", iconName: "star" },
@@ -196,17 +175,8 @@ export function toFame(payload: DashboardOverviewPayload): FameCardData[] {
   });
 }
 
-/* ── activity bucketing (Activity Landscape bars + 3D city) ────────────── */
-
 export const RANGE_DAYS: Record<string, number> = { "1W": 7, "1M": 30, "3M": 90, "1Y": 365 };
 
-/**
- * Slice the trailing `range` window and aggregate it into at most `maxBars`
- * buckets, summing each window so no day is dropped.
- *
- * Mirrors `getFilteredData` in the ported ActivityLandscape, which is the
- * reference behaviour for the Commits / Lines-of-Code toggle.
- */
 export function toActivityBuckets(activity: ActivityData[], range: string, maxBars = 42): ActivityBucket[] {
   const days = RANGE_DAYS[range] ?? 90;
   const recent = activity.slice(-days);
@@ -225,7 +195,6 @@ export function toActivityBuckets(activity: ActivityData[], range: string, maxBa
   const remainder = recent.length % step;
   const buckets: ActivityBucket[] = [];
 
-  // Keep the partial bucket at the oldest edge so recent bars stay full windows.
   if (remainder > 0) buckets.push(pack(recent.slice(0, remainder)));
   for (let i = remainder; i < recent.length; i += step) {
     buckets.push(pack(recent.slice(i, i + step)));
@@ -233,33 +202,20 @@ export function toActivityBuckets(activity: ActivityData[], range: string, maxBa
   return buckets;
 }
 
-/** Human label for a bucket, e.g. "Mar 3 – Mar 5, 2026" or "Mar 5, 2026". */
 export function bucketLabel(bucket: ActivityBucket): string {
   const end = parseDay(bucket.endDate);
   if (bucket.days <= 1 || bucket.startDate === bucket.endDate) return fullDate.format(end);
   return `${dayShort.format(parseDay(bucket.startDate))} – ${fullDate.format(end)}`;
 }
 
-/* ── heatmap + 3D city ─────────────────────────────────────────────────── */
-
-/** 53x7 intensity grid (column-major, oldest first) for the historical heatmap. */
 export type { HeatmapCell, HeatmapGrid } from "@/components/ContributionHeatmap";
 
 const HEATMAP_WEEKS = 53;
 
-/**
- * Build GitHub's contribution-graph grid from the real calendar, over the
- * Dashboard's 12-month window.
- *
- * The bucketing itself lives in `components/ContributionHeatmap` so the
- * Dashboard and the Compare results page share one implementation — see
- * CLAUDE.md's core-once principle.
- */
 export function toHeatmapGrid(activity: ActivityData[]): HeatmapGrid {
   return buildHeatmapGrid(activity, HEATMAP_WEEKS);
 }
 
-/** Sparkline bars under each streak stat card — the trailing 14 buckets. */
 export function toMiniBars(activity: ActivityData[], bucketDays: number): { key: number; heightPct: number; bg: string }[] {
   const slice = activity.slice(-14 * bucketDays);
   const buckets: number[] = [];
@@ -275,15 +231,12 @@ export function toMiniBars(activity: ActivityData[], bucketDays: number): { key:
   }));
 }
 
-/* ── historical trend view ─────────────────────────────────────────────── */
-
 function inPeriod(activity: ActivityData[], period: DashboardPeriod): ActivityData[] {
   const from = period.from.slice(0, 10);
   const to = period.to.slice(0, 10);
   return activity.filter((d) => d.date >= from && d.date <= to);
 }
 
-/** Running streak length per day — drives the "Streak Trend" area chart. */
 function streakTrend(window: ActivityData[]): number[] {
   let run = 0;
   return window.map((d) => {
@@ -367,7 +320,6 @@ function toPopular(payload: DashboardOverviewPayload): PopularRepo[] {
   }));
 }
 
-/** Repos with no push inside `windowDays`, oldest first. */
 export function toInactive(payload: DashboardOverviewPayload, windowDays: number): InactiveRepo[] {
   const now = Date.now();
   return payload.repoActivity
