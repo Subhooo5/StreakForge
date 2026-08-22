@@ -34,9 +34,18 @@ StreakForge turns GitHub contribution history into live 3D isometric "monolith" 
   - `page.tsx` — thin server component, metadata/SEO only, renders the Client component.
   - `<Feature>Client.tsx` — `'use client'`, holds the full ported design markup, state, and interactivity for that page (e.g. `CompareClient.tsx`, `GeneratorClient.tsx`, `CustomizeClient.tsx`, `BurnoutAnalyzerClient.tsx`, `DashboardClient.tsx`). All porting fidelity rules (verbatim markup, inline styles, DCLogic → hooks) apply here without exception.
   - `components/` — components used ONLY by this page, extracted from the Client file for readability/reuse within that page.
-  - `data/`, `utils/`, `types.ts` as needed, colocated.
-- **Top-level `/components`** (sibling to `app/`, not nested inside it) holds ONLY components reused across 2+ pages. A component used by exactly one page belongs in that page's `app/<feature>/components/`, not here.
+  - `data/` — **static data and view-model mappers only** (e.g. `dashboard/data/overview.ts`, `customize/data/themes.ts`, `generator/data/presets.ts`). No hooks.
+  - `hooks/` — **the page's client hooks** (`use*.ts`): `dashboard/hooks/useDashboardData.ts`, `compare/hooks/useCompare.ts`, `customize/hooks/useBadgeSvg.ts`, `burnout-analyzer/hooks/useBurnout.ts`, `generator/hooks/useGithubProfile.ts`. Distinct from top-level `hooks/`, which is for hooks shared across 2+ pages (`useTheme`, `useUrlParams`, `useRecentList`).
+  - `utils/` — pure page-specific helpers, colocated.
+  - `types.ts` — **always at the route root**, never `data/types.ts`.
+- **Top-level `/components`** (sibling to `app/`, not nested inside it) holds ONLY components reused across 2+ pages — currently `Hover.tsx`, `Avatar.tsx`, `ContributionHeatmap.tsx`, `LoadingPanel.tsx`. A component used by exactly one page belongs in that page's `app/<feature>/components/`, not here.
 - **Before creating any new file**, check this section. If its placement doesn't clearly match one of these categories, ask instead of guessing.
+
+### Comment policy (binding, applied repo-wide 2026-08-23)
+
+The repo is deliberately comment-light. Do **not** reintroduce explanatory prose, section dividers, or JSDoc on trivial functions; names and types carry the meaning. Short (4–5 word) comments are kept **only** at load-bearing operations: cache read/write, database connection setup, external API/data fetch calls, rate limiting, and a small number of genuine footguns (the pre-paint theme boot script; the `<html>.dark` sync; the canvas-vs-SVG constraint behind the dashboard Time-Lapse export; the `RESTING_BORDER` reset; the Customize theme table that mirrors `lib/svg/themes.ts`). Directive comments (`eslint-*`, `@ts-*`, `prettier-ignore`) are functional — never strip them.
+
+**When stripping comments, whitespace inside template literals, strings, regex literals and JSX text is OFF LIMITS** — an SVG generator's template whitespace *is* the bytes it emits. Verify any bulk edit by comparing parsed AST shape (excluding JSDoc nodes) before and after.
 
 ## DESIGN SYSTEM — pixel contract (non-negotiable)
 
@@ -141,6 +150,10 @@ These conventions were applied across all pages after the initial port. They **o
    - `useUrlParams(keys)` — read/write several params, with `push` for real navigations.
 
    All three read/write `window.history` rather than `useSearchParams()`, so the page routes stay statically renderable (no Suspense boundary) and Back/Forward work via `popstate`. **Compare's URL is the source of truth for its results**: `/compare` is the battleground, `/compare?user1=X&user2=Y` is a showdown, starting a battle *pushes* those params and an effect performs the fetch — so deep links, refresh, Back (returns to the bare battleground) and Forward all take one code path. `app/compare/page.tsx` is the one route with `generateMetadata` reading `searchParams` (async — always `await`), titling shared links with the matchup; the other routes keep static metadata so they are not deopted to dynamic rendering.
+
+8. **Hover borders reset to their token, never to `''`.** Controls that swap `borderColor` to `var(--accent)` on hover (Customize's nav/repo/theme-toggle/export buttons) must restore `var(--line)` explicitly on leave. Clearing the property removes the longhand the `border` shorthand wrote, so the border falls back to its CSS initial value — `currentColor`, a white outline in dark mode that lingers after the pointer leaves. Home, Dashboard, Compare and Burnout avoid this by driving hover through React state objects that name both states; Customize uses the imperative path and the `RESTING_BORDER` constant.
+
+9. **`Hover` is a shared component.** `components/Hover.tsx` is the single implementation used by all five pages that need pointer-driven inline styles; `app/generator/components/ui.tsx` re-exports it for its siblings. Do not re-add a local copy.
 
 ## UI CHANGE POLICY (binding)
 
