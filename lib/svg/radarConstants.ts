@@ -1,5 +1,3 @@
-// lib/svg/radarConstants.ts
-
 export const RADAR_SVG_WIDTH = 800;
 export const RADAR_SVG_HEIGHT = 400;
 export const RADAR_CENTER_X = 400;

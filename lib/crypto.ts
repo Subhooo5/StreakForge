@@ -1,6 +1,5 @@
 import 'server-only';
 
-// Polyfill global crypto for older environments if needed
 const webCrypto = typeof crypto !== 'undefined' ? crypto : globalThis.crypto;
 
 const ALGO = 'AES-GCM';

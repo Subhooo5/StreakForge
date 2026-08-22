@@ -1,5 +1,3 @@
-// lib/svg/weekday.ts
-
 import type { BadgeParams, ContributionCalendar, StreakStats } from '@/types';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -10,21 +8,12 @@ interface WeekdayBucket {
   average: number;
 }
 
-/**
- * Groups a contribution calendar's daily counts into 7 buckets (Sun–Sat).
- *
- * Note: we derive the weekday from `day.date` rather than the day's position
- * within `week.contributionDays` (even though weeks are stored Sun→Sat).
- * This keeps the grouping correct for partial weeks — e.g. when a `year`
- * or `from`/`to` range slices a calendar starting or ending mid-week.
- */
 function groupByWeekday(calendar: ContributionCalendar): WeekdayBucket[] {
   const totals = new Array(7).fill(0);
   const dayCounts = new Array(7).fill(0);
 
   for (const week of calendar.weeks) {
     for (const day of week.contributionDays) {
-      // day.date is 'YYYY-MM-DD' (confirmed in ContributionDay)
       const weekday = new Date(`${day.date}T00:00:00Z`).getUTCDay();
       totals[weekday] += day.contributionCount;
       dayCounts[weekday] += 1;
@@ -38,11 +27,6 @@ function groupByWeekday(calendar: ContributionCalendar): WeekdayBucket[] {
   }));
 }
 
-/**
- * Renders a "Weekday Rhythm" bar chart SVG — one bar per day of the week,
- * showing total contributions made on that weekday over the queried period.
- * The highest bar (the user's "peak day") is highlighted in the accent color.
- */
 export function generateWeekdaySVG(
   stats: StreakStats,
   params: BadgeParams,
@@ -51,7 +35,6 @@ export function generateWeekdaySVG(
   let grouped = groupByWeekday(calendar);
 
   if (params.hide_weekend) {
-    // Keep only Mon-Fri
     grouped = grouped.filter((d, i) => i !== 0 && i !== 6);
   }
 
@@ -62,13 +45,10 @@ export function generateWeekdaySVG(
   const height = params.height ?? 300;
   const barWidth = 50;
   const gap = 20;
-  // Reserve ~40px at the top for the contributions subtitle and ~40px at the
-  // bottom for the day-of-week labels, leaving the remainder for bar height.
   const chartHeight = height - 80;
   const numBars = grouped.length;
   const startX = (width - (numBars * barWidth + (numBars - 1) * gap)) / 2;
 
-  // params.accent can be HexColor | HexColor[] — normalize to a single color
   const accentColor = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;

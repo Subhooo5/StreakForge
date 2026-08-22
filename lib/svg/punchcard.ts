@@ -3,24 +3,12 @@ import { DEFAULT_FONTS_BASE64, resolveFontFamily } from './fonts';
 import { escapeXML, sanitizeHexColor } from './sanitizer';
 import { getSizeScale, truncateUsername } from './generator';
 
-/**
- * Punch-card view: an isometric field of towers, one per (weekday, hour)
- * bucket, so a year of commits reads as a circadian rhythm — when in the week
- * and when in the day the work actually happens.
- *
- * Shares the badge family's vocabulary rather than inventing its own: the same
- * theme colours, the same size scale, the same embedded fonts and the same
- * hide_title / hide_stats / hideBackground switches every other view honours.
- */
-
 const WIDTH = 800;
 const HEIGHT = 400;
 
-/** Half-width / half-height of one isometric tile. */
 const TILE_W = 12;
 const TILE_H = 6.5;
 
-/** Shortest and tallest a tower can stand, in user units. */
 const TOWER_MIN = 4;
 const TOWER_SPAN = 46;
 
@@ -38,7 +26,6 @@ const HOUR_TICKS: [number, string][] = [
   [18, '6p'],
 ];
 
-/** Screen position of the tile at (day, hour). */
 function tilePos(day: number, hour: number): { x: number; y: number } {
   return {
     x: ORIGIN_X + (hour - day) * TILE_W,
@@ -46,7 +33,6 @@ function tilePos(day: number, hour: number): { x: number; y: number } {
   };
 }
 
-/** One tower: top face, then the two side faces, shaded apart. */
 function tower(x: number, y: number, height: number, color: string, opacity: number): string {
   const top = -height;
   const mid = -height + TILE_H;
@@ -60,11 +46,6 @@ function tower(x: number, y: number, height: number, color: string, opacity: num
   );
 }
 
-/**
- * @param punchCard 7×24 matrix of commit counts, `[day][hour]`, Monday first
- * @param stats     streak stats, for the total shown under the title
- * @param params    badge params (user, theme colours, size, hide flags)
- */
 export function generatePunchcardSVG(
   punchCard: number[][],
   stats: StreakStats,
@@ -87,10 +68,6 @@ export function generatePunchcardSVG(
     }
   }
 
-  // Painter's algorithm: a tile is occluded only by tiles nearer the viewer,
-  // and depth on an isometric grid is day + hour — so draw in that order
-  // globally rather than row by row, which would let a later row's short
-  // tower punch through an earlier row's tall one.
   const cells: { day: number; hour: number; count: number }[] = [];
   for (let day = 0; day < DAYS; day++) {
     for (let hour = 0; hour < HOURS; hour++) {

@@ -1,6 +1,6 @@
-import type { BadgeParams, ContributionCalendar, StreakStats } from '../../types';
-import { truncateUsername, getSizeScale } from './generator';
-import { escapeXML, sanitizeRadius } from './sanitizer';
+import type { BadgeParams, ContributionCalendar, StreakStats } from'../../types';
+import { truncateUsername, getSizeScale } from'./generator';
+import { escapeXML, sanitizeRadius } from'./sanitizer';
 
 const DOUGHNUT_SVG_WIDTH = 400;
 const DOUGHNUT_SVG_HEIGHT = 200;
@@ -24,14 +24,13 @@ function createSlice(
   cx: number,
   cy: number
 ): string {
-  // If the slice is exactly 100%, we draw two semi-circles as an arc can't be a full circle easily.
   if (percentValue >= 1) {
     if (innerRadius === 0) {
-      return `M ${cx - outerRadius} ${cy}
+      return`M ${cx - outerRadius} ${cy}
               A ${outerRadius} ${outerRadius} 0 1 1 ${cx + outerRadius} ${cy}
               A ${outerRadius} ${outerRadius} 0 1 1 ${cx - outerRadius} ${cy} Z`;
     } else {
-      return `M ${cx - outerRadius} ${cy}
+      return`M ${cx - outerRadius} ${cy}
               A ${outerRadius} ${outerRadius} 0 1 1 ${cx + outerRadius} ${cy}
               A ${outerRadius} ${outerRadius} 0 1 1 ${cx - outerRadius} ${cy}
               Z
@@ -47,7 +46,7 @@ function createSlice(
   const largeArcFlag = percentValue > 0.5 ? 1 : 0;
 
   if (innerRadius === 0) {
-    return `M ${cx} ${cy}
+    return`M ${cx} ${cy}
             L ${startX} ${startY}
             A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endX} ${endY}
             Z`;
@@ -61,7 +60,7 @@ function createSlice(
     cy
   );
 
-  return `M ${startX} ${startY}
+  return`M ${startX} ${startY}
           A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endX} ${endY}
           L ${innerEndX} ${innerEndY}
           A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY}
@@ -75,16 +74,15 @@ export function generateDoughnutSVG(
 ): string {
   const sf = getSizeScale(params.size);
   const safeUser = escapeXML(truncateUsername(params.user));
-  const bgColor = params.bg || '0d1117';
-  const textColor = params.text || 'c9d1d9';
+  const bgColor = params.bg ||'0d1117';
+  const textColor = params.text ||'c9d1d9';
 
-  // Use user's accent colors, fallback to a nice palette
   const accents = Array.isArray(params.accent)
     ? params.accent
-    : [params.accent || '58a6ff', 'ff7b72', '3fb950', 'd2a8ff'];
+    : [params.accent ||'58a6ff','ff7b72','3fb950','d2a8ff'];
 
   const colorWeekday = accents[0];
-  const colorWeekend = accents.length > 1 ? accents[1] : 'ff7b72';
+  const colorWeekend = accents.length > 1 ? accents[1] :'ff7b72';
 
   let weekendCommits = 0;
   let weekdayCommits = 0;
@@ -92,7 +90,6 @@ export function generateDoughnutSVG(
   calendar.weeks.forEach((week) => {
     week.contributionDays.forEach((day) => {
       if (day.contributionCount > 0) {
-        // Parse date carefully to avoid timezone issues
         const d = new Date(`${day.date}T12:00:00Z`);
         const dayOfWeek = d.getUTCDay();
         if (dayOfWeek === 0 || dayOfWeek === 6) {
@@ -108,38 +105,32 @@ export function generateDoughnutSVG(
   const weekendPercent = totalCommits > 0 ? weekendCommits / totalCommits : 0;
   const weekdayPercent = totalCommits > 0 ? weekdayCommits / totalCommits : 0;
 
-  const innerRadius = params.view === 'pie' ? INNER_RADIUS_PIE : INNER_RADIUS_DOUGHNUT;
+  const innerRadius = params.view ==='pie' ? INNER_RADIUS_PIE : INNER_RADIUS_DOUGHNUT;
 
-  let slicesSVG = '';
+  let slicesSVG ='';
 
   if (totalCommits === 0) {
-    // Render a placeholder if no commits
-    slicesSVG = `<circle cx="${DOUGHNUT_CENTER_X}" cy="${DOUGHNUT_CENTER_Y}" r="${OUTER_RADIUS}" fill="none" stroke="#${textColor}" stroke-width="2" opacity="0.2" />`;
+    slicesSVG =`<circle cx="${DOUGHNUT_CENTER_X}" cy="${DOUGHNUT_CENTER_Y}" r="${OUTER_RADIUS}" fill="none" stroke="#${textColor}" stroke-width="2" opacity="0.2" />`;
     if (innerRadius > 0) {
-      slicesSVG += `<circle cx="${DOUGHNUT_CENTER_X}" cy="${DOUGHNUT_CENTER_Y}" r="${innerRadius}" fill="#${bgColor}" />`;
+      slicesSVG +=`<circle cx="${DOUGHNUT_CENTER_X}" cy="${DOUGHNUT_CENTER_Y}" r="${innerRadius}" fill="#${bgColor}" />`;
     }
   } else {
-    // Draw slices
-    // Slice 1: Weekday
     if (weekdayPercent > 0) {
-      slicesSVG += `\n    <path d="${createSlice(weekdayPercent, 0, OUTER_RADIUS, innerRadius, DOUGHNUT_CENTER_X, DOUGHNUT_CENTER_Y)}" fill="#${colorWeekday}" />`;
+      slicesSVG +=`\n    <path d="${createSlice(weekdayPercent, 0, OUTER_RADIUS, innerRadius, DOUGHNUT_CENTER_X, DOUGHNUT_CENTER_Y)}" fill="#${colorWeekday}" />`;
     }
-    // Slice 2: Weekend
     if (weekendPercent > 0) {
-      slicesSVG += `\n    <path d="${createSlice(weekendPercent, weekdayPercent, OUTER_RADIUS, innerRadius, DOUGHNUT_CENTER_X, DOUGHNUT_CENTER_Y)}" fill="#${colorWeekend}" />`;
+      slicesSVG +=`\n    <path d="${createSlice(weekendPercent, weekdayPercent, OUTER_RADIUS, innerRadius, DOUGHNUT_CENTER_X, DOUGHNUT_CENTER_Y)}" fill="#${colorWeekend}" />`;
     }
   }
 
-  // Legend and text
-  const viewTitle = params.view === 'pie' ? 'Pie Chart' : 'Doughnut Chart';
+  const viewTitle = params.view ==='pie' ?'Pie Chart' :'Doughnut Chart';
 
-  const weekendStr = (weekendPercent * 100).toFixed(1) + '%';
-  const weekdayStr = (weekdayPercent * 100).toFixed(1) + '%';
+  const weekendStr = (weekendPercent * 100).toFixed(1) +'%';
+  const weekdayStr = (weekdayPercent * 100).toFixed(1) +'%';
 
-  // Validate the corner radius before interpolation into SVG attributes
   const safeRadius = sanitizeRadius(params.radius, 8);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(DOUGHNUT_SVG_WIDTH * sf)}" height="${Math.round(DOUGHNUT_SVG_HEIGHT * sf)}" viewBox="0 0 ${DOUGHNUT_SVG_WIDTH} ${DOUGHNUT_SVG_HEIGHT}" role="img" aria-labelledby="sf-doughnut-title sf-doughnut-desc">
+  return`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(DOUGHNUT_SVG_WIDTH * sf)}" height="${Math.round(DOUGHNUT_SVG_HEIGHT * sf)}" viewBox="0 0 ${DOUGHNUT_SVG_WIDTH} ${DOUGHNUT_SVG_HEIGHT}" role="img" aria-labelledby="sf-doughnut-title sf-doughnut-desc">
   <title id="sf-doughnut-title">StreakForge ${viewTitle} for ${safeUser}</title>
   <desc id="sf-doughnut-desc">A ${viewTitle.toLowerCase()} showing weekday vs weekend commits for ${safeUser}.</desc>
   <defs>

@@ -1,19 +1,6 @@
-/**
- * Secret detection and redaction for commit messages.
- *
- * Commit messages flow from webhook payloads into CI analytics views
- * without any screening, so an accidentally pasted token or password
- * becomes visible to everyone who can see the dashboard. This module
- * detects high confidence secret formats and replaces them with a
- * typed placeholder before the message is stored or rendered.
- */
-
 export interface SecretFinding {
-  /** Which detector matched, e.g. "github-token". */
   type: string;
-  /** Index of the match within the scanned text. */
   index: number;
-  /** Length of the matched secret. */
   length: number;
 }
 
@@ -22,12 +9,8 @@ interface SecretPattern {
   pattern: RegExp;
 }
 
-// Ordered from most to least specific so overlapping matches redact
-// with the most precise label. Every regex uses the global flag; they
-// are re-instantiated per scan via lastIndex reset in scan().
 const SECRET_PATTERNS: SecretPattern[] = [
   {
-    // Classic and fine-grained GitHub tokens.
     type: 'github-token',
     pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,255}\b|\bgithub_pat_[A-Za-z0-9_]{22,255}\b/g,
   },
@@ -61,11 +44,9 @@ const SECRET_PATTERNS: SecretPattern[] = [
   },
   {
     type: 'connection-string-credentials',
-    // postgres://user:password@host, mongodb+srv://user:password@host, etc.
     pattern: /\b[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s:/@]+:[^\s@]+@[^\s]+/g,
   },
   {
-    // password=..., api_key: "...", secret = '...' style assignments.
     type: 'credential-assignment',
     pattern:
       /\b(?:password|passwd|pwd|api[_-]?key|apikey|secret|access[_-]?token|auth[_-]?token|client[_-]?secret)\b\s*[:=]\s*["']?(?!\s)(?!["'])(?!\$\{)(?!<[^>]+>)[^\s"']{8,}["']?/gi,
@@ -74,7 +55,6 @@ const SECRET_PATTERNS: SecretPattern[] = [
 
 const REDACTION_LABEL = (type: string) => `[REDACTED:${type}]`;
 
-/** Return every secret found in the text, ordered by position. */
 export function detectSecrets(text: string): SecretFinding[] {
   if (!text) return [];
   const findings: SecretFinding[] = [];
@@ -85,7 +65,6 @@ export function detectSecrets(text: string): SecretFinding[] {
     for (const match of text.matchAll(pattern)) {
       const start = match.index ?? 0;
       const end = start + match[0].length;
-      // Skip regions already claimed by a more specific detector.
       if (claimed.some(([s, e]) => start < e && end > s)) continue;
       claimed.push([start, end]);
       findings.push({ type, index: start, length: match[0].length });
@@ -99,11 +78,6 @@ export function containsSecrets(text: string): boolean {
   return detectSecrets(text).length > 0;
 }
 
-/**
- * Replace every detected secret with a typed placeholder. Text without
- * findings is returned unchanged (same reference), so callers can use
- * an identity check to decide whether to log a warning.
- */
 export function redactSecrets(text: string): string {
   const findings = detectSecrets(text);
   if (findings.length === 0) return text;

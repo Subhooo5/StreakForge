@@ -1,4 +1,3 @@
-// lib/validations.ts
 import { supportedLanguages } from './i18n/badgeLabels';
 import { z } from 'zod';
 import type { HexColor } from '../types/index';
@@ -74,13 +73,6 @@ export function toValidHexColor(defaultColor: string) {
     val && isValidHex(val) ? sanitizeHexColor(val, defaultColor) : undefined;
 }
 
-/**
- * Parses the ?grace= URL parameter.
- * Uses parseFloat() — the standard for all numeric URL param parsers in this
- * file — so that partial strings like '2abc' parse as 2 rather than NaN,
- * and empty string correctly returns NaN (triggering the default fallback).
- * Clamps to [0, 7]. Default: 1.
- */
 export function toGraceValue(val?: string): number {
   if (!val) return 1;
   const parsed = parseFloat(val);
@@ -102,42 +94,26 @@ export function validateGitHubUsername(username: string): boolean {
   return GITHUB_USERNAME_REGEX.test(username);
 }
 
-/**
- * Strict ISO date validation for date-only inputs (YYYY-MM-DD).
- * Validates that the date is a real calendar date by checking:
- * 1. Format matches YYYY-MM-DD
- * 2. Year, month, day are valid ranges
- * 3. Date round-trips correctly (serialization matches input)
- *
- * For non-YYYY-MM-DD formats, falls back to Date.parse validation.
- */
 export function validateStrictISODate(dateStr: string): boolean {
   if (!dateStr || typeof dateStr !== 'string') return false;
-  // Check if it matches YYYY-MM-DD format
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
   if (match) {
-    // Strict validation for YYYY-MM-DD format
     const [, yearStr, monthStr, dayStr] = match;
     const year = parseInt(yearStr, 10);
     const month = parseInt(monthStr, 10);
     const day = parseInt(dayStr, 10);
 
-    // Basic range checks
     if (month < 1 || month > 12) return false;
     if (day < 1 || day > 31) return false;
     if (year < 2008) return false;
 
-    // Create UTC date and verify it round-trips
     const date = new Date(Date.UTC(year, month - 1, day));
     const serialized = date.toISOString().split('T')[0];
 
-    // Check that the serialized date matches the input
-    // This catches invalid dates like Feb 31, Apr 31, etc.
     return serialized === dateStr;
   }
 
-  // For non-YYYY-MM-DD formats, fall back to Date.parse validation
   return !isNaN(Date.parse(dateStr));
 }
 
@@ -158,32 +134,17 @@ function dimensionParam(name: string, min: number, max: number) {
     .transform(toDimensionValue);
 }
 
-/**
- * Maps raw GMT/UTC offset strings (e.g. "GMT+5", "UTC-3") to the
- * Etc/GMT±N format that Intl.DateTimeFormat accepts.
- *
- * Note: The Etc/GMT sign convention is *inverted* relative to the
- * common GMT± notation — Etc/GMT+5 means UTC−5. This function
- * performs that inversion automatically.
- *
- * Returns the original string unchanged if it doesn't match a raw
- * offset pattern, so callers can pass any timezone string through.
- */
 export function normalizeTimezone(tz: string): string {
-  // Match patterns: GMT+N, GMT-N, UTC+N, UTC-N (whole hours 0-14)
   const match = tz.match(/^(?:GMT|UTC)([+-])(\d{1,2})$/i);
   if (!match) return tz;
 
   const sign = match[1];
   const offset = parseInt(match[2], 10);
 
-  // Validate offset range: UTC-12 to UTC+14
   if (offset > 14 || (sign === '-' && offset > 12)) return tz;
 
-  // GMT+0 / UTC+0 → UTC (avoids the Etc/GMT-0 / Etc/GMT+0 ambiguity)
   if (offset === 0) return 'UTC';
 
-  // Invert sign for Etc/GMT convention: GMT+5 → Etc/GMT-5
   const invertedSign = sign === '+' ? '-' : '+';
   return `Etc/GMT${invertedSign}${offset}`;
 }
@@ -191,17 +152,14 @@ export function normalizeTimezone(tz: string): string {
 function isValidTimeZone(tz?: string): boolean {
   if (!tz) return true;
 
-  // First try the timezone as-is (covers IANA names and Etc/GMT±N)
   try {
     Intl.DateTimeFormat(undefined, { timeZone: tz });
     return true;
   } catch {
-    // Fall through to normalization
   }
 
-  // Try normalizing raw GMT/UTC offsets to Etc/GMT format
   const normalized = normalizeTimezone(tz);
-  if (normalized === tz) return false; // No normalization happened, it's invalid
+  if (normalized === tz) return false;
 
   try {
     Intl.DateTimeFormat(undefined, { timeZone: normalized });
@@ -228,7 +186,6 @@ export const githubUsernameSchema = z
   });
 
 const baseStreakParamsSchema = z.object({
-  // Required — missing user surfaces as "Missing" to match existing tests
   user: z
     .string({ error: 'Missing user parameter' })
     .min(1, { message: 'Missing user parameter' })
@@ -368,22 +325,17 @@ const baseStreakParamsSchema = z.object({
       return undefined;
     }),
 
-  // Silently fall back to 'linear' for unknown values (matches old behavior)
   scale: z.enum(['linear', 'log', 'sqrt']).catch('linear').default('linear'),
 
-  // Invalid size values fall back to 'medium' to preserve badge rendering.
   size: z.enum(['small', 'medium', 'large']).catch('medium').default('medium'),
 
-  // to fetch N days contributions
   days: z.coerce.number().int().positive().max(366).optional(),
 
-  // Silently fall back to '8s' for invalid format (matches old behavior)
   speed: z
     .string()
     .transform((val) => sanitizeSpeed(val, '8s'))
     .default('8s'),
 
-  // Invalid radius values are sanitized and fall back to 8px.
   radius: z
     .string()
     .transform((val) => sanitizeRadius(val, 8))
@@ -486,7 +438,6 @@ const baseStreakParamsSchema = z.object({
   hide_stats: z.string().optional().transform(toBooleanFlag),
   lang: z.enum(supportedLanguages).catch('en').default('en'),
   tz: timeZoneParam,
-  // Unknown view values fall back to the default dashboard view.
   view: z
     .enum([
       'default',
@@ -507,7 +458,6 @@ const baseStreakParamsSchema = z.object({
     ])
     .catch('default')
     .default('default'),
-  // Invalid delta formats fall back to percentage mode.
   delta_format: z.enum(['percent', 'absolute', 'both']).catch('percent').default('percent'),
   width: dimensionParam('width', 100, 1200),
   height: dimensionParam('height', 80, 800),
@@ -579,10 +529,8 @@ const baseStreakParamsSchema = z.object({
     .optional()
     .transform((val) => val === 'true' || val === '1'),
 
-  // Glow effect — on by default. Accepts 'true'/'1' (true) or 'false' (false).
   glow: z.string().optional().transform(toGlowFlag).default(true),
 
-  // SVG optimization — on by default. Accepts 'true'/'1' (true) or 'false' (false).
   minify: z.string().optional().transform(toMinifyFlag).default(true),
   opacity: z.string().optional().transform(toOpacityValue),
   entrance: z
@@ -592,8 +540,6 @@ const baseStreakParamsSchema = z.object({
   badges: z.string().optional().transform(toBooleanFlag).default(false),
   hide_weekend: z.string().optional().transform(toBooleanFlag).default(false),
 
-  // Output format: 'svg' (default), 'json', or 'png' for image export.
-  // Invalid values silently fall back to 'svg'.
   format: z.enum(['svg', 'json', 'png']).catch('svg').default('svg'),
 
   theta: z
@@ -622,7 +568,6 @@ const baseStreakParamsSchema = z.object({
     )
     .transform((val) => (val === undefined || val === '' ? undefined : Number(val))),
 
-  // layout parameter: strictly validated — unsupported values return a 400 Bad Request.
   layout: z
     .string()
     .optional()
@@ -635,7 +580,6 @@ const baseStreakParamsSchema = z.object({
     )
     .transform((val) => (!val ? undefined : val)),
 
-  // border parameter: optional hex color for SVG badge border stroke
   border: z
     .string()
     .optional()
@@ -664,7 +608,6 @@ export const streakParamsSchema = baseStreakParamsSchema.refine(
 const HEX_REGEX = /^([A-Fa-f0-9]{3,4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/;
 
 export const githubParamsSchema = z.object({
-  // Preprocess leaves undefined untouched so we can distinguish missing vs empty string
   username: z.preprocess(
     (val) => (typeof val === 'string' ? val.trim() : val),
     z
@@ -747,10 +690,6 @@ export const compareParamsSchema = z
     }
   );
 
-/**
- * Repository names allow a wider character set than usernames — dots,
- * underscores and a leading dot are all legal on GitHub.
- */
 export const GITHUB_REPO_NAME_REGEX = /^[A-Za-z0-9._-]+$/;
 
 export const burnoutParamsSchema = z.object({
@@ -915,7 +854,7 @@ export const wrappedParamsSchema = z.object({
   refresh: z.string().optional().transform(toRefreshFlag),
   bypassCache: z.string().optional().transform(toRefreshFlag),
   hide_title: z.string().optional().transform(toBooleanFlag),
-  hide_background: z.string().optional().transform(toBooleanFlag), // ✅ Fixed: was toRefreshFlag
+  hide_background: z.string().optional().transform(toBooleanFlag),
   width: dimensionParam('width', 100, 1200),
   height: dimensionParam('height', 80, 800),
   org: z

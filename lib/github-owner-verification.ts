@@ -17,12 +17,6 @@ function getBearerToken(request: Request): string | null {
   return match?.[1] ?? null;
 }
 
-/**
- * Verifies that the caller's GitHub access token belongs to the requested username.
- *
- * Tokens are used only for the GitHub `/user` verification request and are never
- * stored, logged, or included in error responses.
- */
 export async function verifyGitHubOwner(
   request: Request,
   requestedUsername: string

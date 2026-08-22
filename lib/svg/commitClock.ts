@@ -33,7 +33,6 @@ export function generateCommitClockSVG(
     return h < 12 ? `${h}a` : `${h - 12}p`;
   };
 
-  // Build 24 polar segments
   let segments = '';
   const sliceAngle = (2 * Math.PI) / 24;
 
@@ -59,7 +58,6 @@ export function generateCommitClockSVG(
     segments += `<path d="M${x1.toFixed(2)},${y1.toFixed(2)} L${x2.toFixed(2)},${y2.toFixed(2)} A${r.toFixed(2)},${r.toFixed(2)} 0 0,1 ${x3.toFixed(2)},${y3.toFixed(2)} L${x4.toFixed(2)},${y4.toFixed(2)} A${INNER_R},${INNER_R} 0 0,0 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="#${accent}" fill-opacity="${opacity.toFixed(2)}" stroke="#${accent}" stroke-width="${strokeW}" opacity="${opacity.toFixed(2)}"/>\n`;
   }
 
-  // Cardinal labels: 12a, 6a, 12p, 6p
   const cardinals = [
     { h: 0, label: '12a' },
     { h: 6, label: '6a' },
@@ -75,10 +73,8 @@ export function generateCommitClockSVG(
     cardinalLabels += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="#${text}" font-family="'Inter',sans-serif" font-size="10" text-anchor="middle" dominant-baseline="central" opacity="0.7">${label}</text>\n`;
   }
 
-  // Inner circle
   const innerCircle = `<circle cx="${CX}" cy="${CY}" r="${INNER_R}" fill="#${bg}" stroke="#${text}" stroke-width="0.5" opacity="0.3"/>`;
 
-  // Stats panel
   const statsX = 310;
   const statsPanel = `
 <text x="${statsX}" y="70" fill="#${accent}" font-family="'Inter',sans-serif" font-size="13" font-weight="700" opacity="0.9">Commit Clock</text>

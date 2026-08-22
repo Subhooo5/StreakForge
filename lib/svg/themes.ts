@@ -68,20 +68,13 @@ export const themes: Record<string, BadgeTheme> = {
   ayu_mirage: makeTheme('212733', 'D9D7CE', 'FFCC66', 'FF3333'),
 };
 
-// Auto-theme pairs: the SVG switches between these two palettes
-// using @media (prefers-color-scheme) so the badge adapts to the
-// viewer's OS-level light/dark setting without any JavaScript.
 export const AUTO_THEME_LIGHT: BadgeTheme = themes.light ?? themes.default;
 export const AUTO_THEME_DARK: BadgeTheme = themes.dark ?? themes.default;
 
-/**
- * Resolves a theme case-insensitively by matching the normalized user input
- * against the normalized theme registry keys. Returns the standard theme key.
- */
 export function getNormalizedThemeKey(
   themeInput: string | string[] | undefined | null | unknown
 ): string {
-  if (!themeInput) return 'default'; // fallback key
+  if (!themeInput) return 'default';
 
   if (Array.isArray(themeInput)) {
     if (themeInput.length === 0) return 'default';
@@ -104,10 +97,6 @@ export interface ErrorThemeColors {
   speed: string;
 }
 
-/**
- * Resolves theme colors and badge parameters from request query params or raw object.
- * Enables error fallbacks to visually match requested user themes.
- */
 export function resolveErrorTheme(
   searchParams?: URLSearchParams | Record<string, string | string[] | undefined> | null
 ): ErrorThemeColors {

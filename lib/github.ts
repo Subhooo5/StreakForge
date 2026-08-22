@@ -1,5 +1,4 @@
 import 'server-only';
-// Resolves Issue #6105 (Intelligent API Resilience)
 import type {
   ContributionCalendar,
   ContributionDay,
@@ -79,12 +78,6 @@ export function shouldFallbackOnError(err: unknown): boolean {
   return false;
 }
 
-/**
- * Read a positive integer from the environment, falling back to the
- * default when the variable is unset, not a number, or non-positive.
- * A value like "abc" or "-5" would otherwise produce a NaN or negative
- * timeout and break AbortSignal scheduling at request time.
- */
 function positiveIntFromEnv(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw === '') return fallback;
@@ -102,14 +95,6 @@ let currentTokenIndex = 0;
 const rateLimitedTokens = new Map<string, number>();
 const tokenStats = new Map<string, { remaining: number; resetTime: number }>();
 
-// Issue #7380: Promise-based mutex serializing every read-modify-write of
-// currentTokenIndex.  Because getGitHubToken and the 401/429 handlers run
-// across `await` boundaries, two concurrent async requests can otherwise
-// interleave between reading currentTokenIndex and writing it back — corrupting
-// the value (e.g. letting it exceed tokens.length or skipping a healthy token).
-// The lock guarantees only one caller mutates the index at a time.  getGitHubToken
-// itself is synchronous and therefore already atomic, but the handlers below run
-// asynchronously and must take the lock before touching the shared index.
 let tokenIndexLock: Promise<void> = Promise.resolve();
 
 function withTokenIndexLock<T>(fn: () => T | Promise<T>): Promise<T> {
@@ -130,12 +115,8 @@ function withTokenIndexLock<T>(fn: () => T | Promise<T>): Promise<T> {
   });
 }
 
-// Issue #7213: Per-token pending refresh promise to deduplicate concurrent rotations.
-// When multiple concurrent requests detect an expired token, only one triggers
-// the rotation; subsequent requests await the same in-flight promise.
 const pendingRefreshPromises = new Map<string, Promise<void>>();
 
-//Explicit, strongly-typed Error subclass
 export class RateLimitError extends Error {
   constructor(
     message: string,
@@ -146,7 +127,6 @@ export class RateLimitError extends Error {
   }
 }
 
-// Global circuit state tracking
 let globalCircuitBreakerOpenUntil = 0;
 
 function isValidGitHubTokenFormat(token: string): boolean {
@@ -210,7 +190,6 @@ export async function fetchWithRetry(
 ): Promise<Response> {
   const now = Date.now();
 
-  // Problem 1 & 5 Fix: Global Short-Circuit Guard at the absolute front door
   if (now < globalCircuitBreakerOpenUntil) {
     throw new RateLimitError(
       'Circuit Breaker Open: Request blocked due to total token exhaustion.',
@@ -313,15 +292,11 @@ export async function fetchWithRetry(
     }
   }
 
-  // Handle invalid/expired tokens (HTTP 401)
   const isInvalidToken = res.status === 401;
   if (isInvalidToken && currentToken) {
-    // Issue #7213: Use per-token pending refresh promise to prevent
-    // concurrent duplicate rotations that skip healthy tokens
     await handleTokenExpiration(currentToken);
 
     const tokens = getGitHubTokens();
-    // Retry immediately with the next token if available
     if (attempt < MAX_RETRIES && tokens.length > 1) {
       const delay = getJitteredBackoff(attempt);
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -329,7 +304,6 @@ export async function fetchWithRetry(
     }
   }
 
-  // Check for rate limit headers
   const retryAfter = res.headers.get('retry-after');
   const isRateLimited =
     res.status === 429 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0');
@@ -337,7 +311,7 @@ export async function fetchWithRetry(
   if (isRateLimited) {
     if (currentToken) {
       const resetHeader = res.headers.get('x-ratelimit-reset');
-      let resetTime = Date.now() + 60 * 1000; // default 1 min
+      let resetTime = Date.now() + 60 * 1000;
       if (resetHeader) {
         const parsed = parseInt(resetHeader, 10);
         if (!Number.isNaN(parsed)) {
@@ -346,8 +320,6 @@ export async function fetchWithRetry(
       }
       rateLimitedTokens.set(currentToken, resetTime);
       tokenStats.set(currentToken, { remaining: 0, resetTime });
-      // Issue #7380: advance the rotation index under the mutex so concurrent
-      // rate-limit handlers cannot both read then write the same value.
       await withTokenIndexLock(() => {
         const tokens = getGitHubTokens();
         if (tokens.length > 1) {
@@ -371,11 +343,8 @@ export async function fetchWithRetry(
       }
     }
 
-    // Clamp between exponential default and maximum safe delay before we early exit anyway
     delay = Math.max(BASE_DELAY_MS, delay);
 
-    // If the delay is too long (e.g., > 5 seconds), it's a hard limit.
-    // Return immediately to avoid serverless function timeouts.
     if (delay > MAX_RETRY_DELAY_MS) {
       return res;
     }
@@ -384,7 +353,6 @@ export async function fetchWithRetry(
     return fetchWithRetry(url, requestOptions, attempt + 1, timeoutMs, userToken);
   }
 
-  // Only retry on 5xx — all other statuses are returned immediately
   const shouldRetry = res.status >= 500;
   if (!shouldRetry || attempt >= MAX_RETRIES) return res;
 
@@ -440,8 +408,6 @@ function assertValidGraphQLBody(options: RequestInit): void {
   }
 }
 
-// Wraps fetchWithRetry to also retry on GraphQL-level RATE_LIMITED errors
-// that GitHub returns with HTTP 200 OK instead of 429.
 async function fetchGraphQLWithRetry(
   url: string | URL,
   options: RequestInit,
@@ -502,14 +468,13 @@ function getGitHubRateLimitInfo(res: Response): GitHubRateLimitInfo {
   };
 }
 
-// Extract rate limit telemetry headers if available
 function createRateLimitError(res: Response): RateLimitError {
   const limitHeader = res.headers.get('x-ratelimit-limit');
   const remainingHeader = res.headers.get('x-ratelimit-remaining');
   const resetHeader = res.headers.get('x-ratelimit-reset');
 
   const now = Date.now();
-  let retryAfterMs = 60000; // Default 1-minute safety window
+  let retryAfterMs = 60000;
 
   if (resetHeader) {
     const resetUnixTimeSeconds = parseInt(resetHeader, 10);
@@ -589,8 +554,6 @@ type FetchOptions = {
   signal?: AbortSignal;
   org?: string;
   excludeBots?: boolean;
-  // Authenticated user's OAuth token. When set, GitHub calls use THIS token
-  // (the user's personal rate-limit quota) instead of the global PAT pool.
   token?: string;
 };
 
@@ -649,7 +612,6 @@ function sanitizeRepo(repo: GitHubRepo): GitHubRepo {
     created_at: repo.created_at,
     owner: repo.owner,
     homepage: repo.homepage,
-    // Kept for the repository-spotlight card, which renders it verbatim.
     description: repo.description,
   };
 }
@@ -699,21 +661,18 @@ function getGitHubToken(): string {
   const now = Date.now();
   const tokenSet = new Set(tokens);
 
-  // Clear expired and missing env tokens from map
   for (const [t, expiry] of rateLimitedTokens.entries()) {
     if (now >= expiry || !tokenSet.has(t)) {
       rateLimitedTokens.delete(t);
     }
   }
 
-  // Clear missing env tokens from tokenStats
   for (const t of tokenStats.keys()) {
     if (!tokenSet.has(t)) {
       tokenStats.delete(t);
     }
   }
 
-  // Find all active (non-rate-limited) tokens
   const activeTokens: string[] = [];
   for (const token of tokens) {
     const expiry = rateLimitedTokens.get(token);
@@ -728,12 +687,10 @@ function getGitHubToken(): string {
   }
 
   if (activeTokens.length > 0) {
-    // Separate into known and unknown
     const unknownTokens = activeTokens.filter((t) => !tokenStats.has(t));
     let bestToken = '';
 
     if (unknownTokens.length > 0) {
-      // Two-phase fallback: pick the next unknown token in round-robin order
       let bestTokenIndex = -1;
       for (let i = 0; i < tokens.length; i++) {
         const idx = (currentTokenIndex + i) % tokens.length;
@@ -749,7 +706,6 @@ function getGitHubToken(): string {
         return bestToken;
       }
     } else {
-      // All active tokens have known stats: pick the one with the highest remaining quota
       let maxRemaining = -1;
       let bestIndex = -1;
       for (const token of activeTokens) {
@@ -767,7 +723,6 @@ function getGitHubToken(): string {
     }
   }
 
-  // Calculate the optimal, absolute earliest reset timestamp if all tokens are limited
   const resetTimes: number[] = [];
   for (const token of tokens) {
     const expiry = rateLimitedTokens.get(token);
@@ -783,23 +738,11 @@ function getGitHubToken(): string {
   const earliestResetTime = resetTimes.length > 0 ? Math.min(...resetTimes) : now + 60 * 1000;
   const backoffMs = Math.max(0, earliestResetTime - now);
 
-  // Trip the global circuit breaker state immediately
   globalCircuitBreakerOpenUntil = earliestResetTime;
 
-  // Throw RateLimitError
   throw new RateLimitError('API Rate Limit Exceeded', backoffMs);
 }
 
-/**
- * Issue #7213: Handles token expiration with a per-token pending refresh promise pattern.
- * When multiple concurrent requests detect an expired token, only one triggers
- * the rotation; subsequent requests await the same in-flight promise.
- *
- * This prevents:
- * - Double rotation: skipping a healthy token in the pool
- * - Stale token use: continued use of a token that was already rotated
- * - Lost token state: overwritten rate-limit tracking
- */
 export async function handleTokenExpiration(token: string): Promise<void> {
   if (pendingRefreshPromises.has(token)) {
     await pendingRefreshPromises.get(token)!;
@@ -808,8 +751,6 @@ export async function handleTokenExpiration(token: string): Promise<void> {
 
   const refreshPromise = (async () => {
     rateLimitedTokens.set(token, Date.now() + 24 * 60 * 60 * 1000);
-    // Issue #7380: advance the rotation index under the mutex so concurrent
-    // expiration handlers cannot both read then write the same value.
     await withTokenIndexLock(() => {
       const tokens = getGitHubTokens();
       if (tokens.length > 1) {
@@ -845,10 +786,6 @@ export function getCircuitTelemetry() {
     resetInMs: isOpen ? Math.max(0, globalCircuitBreakerOpenUntil - now) : 0,
   };
 }
-
-/* ==========================================================================
- * DATA FETCHING
- * ========================================================================== */
 
 const FETCH_TIMEOUT_MS = Number(process.env.GITHUB_FETCH_TIMEOUT_MS ?? '4000');
 const activeContributionsPromises = new Map<string, Promise<ExtendedContributionData>>();
@@ -920,7 +857,6 @@ export async function fetchGitHubContributions(
         activeContributionsPromises.delete(key);
       });
       activeContributionsPromises.set(key, pending);
-      // Safety max-age cleanup: remove from promise map after 30 seconds anyway
       const timer = setTimeout(() => {
         activeContributionsPromises.delete(key);
       }, 30000);
@@ -1140,7 +1076,6 @@ async function fetchContributionsUncached(
 
   let calendar = data.data.user.contributionsCollection?.contributionCalendar;
 
-  // 🔽 CHANGE THIS SECTION 🔽
   let repoContributions = data.data.user.contributionsCollection?.commitContributionsByRepository;
   if (!repoContributions || !Array.isArray(repoContributions)) {
     console.warn(
@@ -1148,7 +1083,6 @@ async function fetchContributionsUncached(
     );
     repoContributions = [];
   }
-  // 🔼 END OF CHANGE 🔼
 
   if (!calendar || !calendar.weeks) {
     calendar = {
@@ -1300,7 +1234,6 @@ export async function fetchUserRepos(
   username: string,
   options: FetchOptions = {}
 ): Promise<GitHubRepo[]> {
-  // 1. Lowercase and encode the username parameter right away to pass the case-insensitive test spec
   const encodedUsername = encodeURIComponent(username);
   const key = cacheKey('repos', encodedUsername);
 
@@ -1412,10 +1345,6 @@ async function fetchReposUncached(
   return allRepos;
 }
 
-/* ==========================================================================
- * ORG AGGREGATION & EPIC FEATURES
- * ========================================================================== */
-
 export async function fetchOrgMembers(orgName: string, userToken?: string): Promise<string[]> {
   const encodedOrgName = encodeURIComponent(orgName);
   const allMembers: string[] = [];
@@ -1488,7 +1417,6 @@ export async function getOrgDashboardData(
     members = members.filter((member) => !isBotAuthor(member));
   }
 
-  // Limit active members to protect shared token rate limit and improve response times
   const activeMembers = members.slice(0, ORG_MEMBER_LIMIT);
 
   const controller = new AbortController();
@@ -1521,7 +1449,6 @@ export async function getOrgDashboardData(
   const isPartial =
     members.length > activeMembers.length || calendars.length < activeMembers.length;
 
-  // Create the Mega-City
   const aggregatedCalendar = aggregateCalendars(calendars);
   const streakStats = calculateStreak(aggregatedCalendar);
   const totalStars = reposData.reduce((acc, r) => acc + r.stargazers_count, 0);
@@ -2060,13 +1987,9 @@ async function fetchStarredRepos(username: string, token?: string): Promise<Popu
   }
 }
 
-/* ==========================================================================
- * PRODUCTION DEPLOYMENTS — CI/CD shipping velocity tracker
- * ========================================================================== */
-
 interface GitHubWorkflowRun {
-  status: string; // 'completed' | 'in_progress' | 'queued' | ...
-  conclusion: string | null; // 'success' | 'failure' | 'cancelled' | null
+  status: string;
+  conclusion: string | null;
   name: string | null;
   created_at: string;
 }
@@ -2078,7 +2001,7 @@ interface GitHubDeployment {
 }
 
 interface GitHubDeploymentStatus {
-  state: string; // 'success' | 'failure' | 'error' | 'pending' | ...
+  state: string;
   environment_url: string | null;
   created_at: string;
 }
@@ -2097,7 +2020,6 @@ function mapConclusionToStatus(
   return 'unknown';
 }
 
-/** Fetch the most recent workflow run for a single repo (used for the status badge). */
 async function fetchLatestWorkflowRun(
   owner: string,
   repo: string,
@@ -2123,7 +2045,6 @@ async function fetchLatestWorkflowRun(
   }
 }
 
-/** Fetch the most recent deployment + its latest status for a single repo. */
 async function fetchLatestDeployment(
   owner: string,
   repo: string,
@@ -2165,22 +2086,12 @@ async function fetchLatestDeployment(
   }
 }
 
-/**
- * Builds the "Production Deployments" card data for up to `limit` of the user's
- * most-recently-pushed repositories. Combines GitHub Actions workflow status
- * (for the badge) with the Deployments API (for the live URL + timestamp).
- * Repos with neither a deployment nor a workflow run are skipped — only repos
- * that are actually shipping show up here.
- */
 async function fetchDeploymentTrackerData(
   username: string,
   reposData: GitHubRepo[],
   limit = 3,
   token?: string
 ): Promise<import('../types/dashboard').DeploymentData[]> {
-  // Only consider non-fork repos, most-recently-pushed first (reposData is
-  // already sorted by `pushed` from fetchUserRepos). Check a slightly larger
-  // candidate pool than `limit` since some repos won't have any deployments.
   const candidates = reposData.filter((r) => !r.fork).slice(0, limit * 4);
   if (candidates.length === 0) return [];
 
@@ -2192,7 +2103,6 @@ async function fetchDeploymentTrackerData(
         fetchLatestDeployment(owner, repo.name, token),
       ]);
 
-      // Skip repos with no shipping signal at all
       if (!workflowRun && !deploymentInfo) return null;
 
       const liveUrl = deploymentInfo?.deploymentStatus?.environment_url || repo.homepage || null;
@@ -2708,10 +2618,6 @@ export async function fetchCommitHourDistribution(
 ): Promise<number[]> {
   const hourCounts = new Array(24).fill(0);
 
-  // Extracts the hour-of-day (0-23) for a commit timestamp in the given
-  // IANA timezone. Mirrors the Intl.DateTimeFormat pattern already used in
-  // utils/time.ts's getSecondsUntilMidnightInTimezone(), rather than
-  // Date.getHours()/getUTCHours() which ignore the requested timezone.
   const getHourInTimezone = (isoDate: string, tz: string): number => {
     try {
       const parts = new Intl.DateTimeFormat('en-US', {
@@ -2724,13 +2630,10 @@ export async function fetchCommitHourDistribution(
       const hour = hourPart ? parseInt(hourPart, 10) % 24 : new Date(isoDate).getUTCHours();
       return hour;
     } catch {
-      // Invalid timezone string — fall back to UTC rather than throwing,
-      // consistent with how other views degrade on a bad ?tz= value.
       return new Date(isoDate).getUTCHours();
     }
   };
 
-  // Fetch top repos by contribution count
   const query = `
     query($login: String!) {
       user(login: $login) {
@@ -2773,7 +2676,6 @@ export async function fetchCommitHourDistribution(
       }));
     }
   } catch {
-    // silent — return empty distribution
   }
 
   if (topRepos.length === 0) return hourCounts;
@@ -2819,7 +2721,6 @@ export async function fetchCommitHourDistribution(
         hourCounts[hour]++;
       }
     } catch {
-      // skip unavailable repos
     }
     return null;
   });
@@ -2832,7 +2733,6 @@ export async function fetchCommitPunchCard(
   token?: string,
   timezone: string = 'UTC'
 ): Promise<number[][]> {
-  // 7 days (Mon-Sun), 24 hours
   const punchCard: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
 
   const getDayAndHourInTimezone = (isoDate: string, tz: string): { day: number; hour: number } => {
@@ -2849,7 +2749,6 @@ export async function fetchCommitPunchCard(
       const hour = hourPart ? parseInt(hourPart, 10) % 24 : new Date(isoDate).getUTCHours();
 
       const weekdayPart = parts.find((p) => p.type === 'weekday')?.value;
-      // Map to 0-6 where 0 = Monday, 6 = Sunday
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       let day = days.indexOf(weekdayPart ?? 'Mon');
       if (day === -1) {
@@ -2907,7 +2806,6 @@ export async function fetchCommitPunchCard(
       }));
     }
   } catch {
-    // silent
   }
 
   if (topRepos.length === 0) return punchCard;
@@ -2953,7 +2851,6 @@ export async function fetchCommitPunchCard(
         punchCard[day][hour]++;
       }
     } catch {
-      // skip
     }
     return null;
   });

@@ -5,13 +5,13 @@ import type {
   StreakStats,
   MonthlyStats,
   RepoContribution,
-} from '../../types';
-import { getLabels, type BadgeLabels } from '../i18n/badgeLabels';
-import { AUTO_THEME_DARK, AUTO_THEME_LIGHT, themes } from './themes';
-import { getTowerAnimationCSS } from './animations';
-import { DEFAULT_FONTS_BASE64 } from './fonts';
-import { computeTowers, computeTeamTowers, type TowerData, computeTowerHeight } from './layout';
-import { LANGUAGE_COLORS } from './languageColors';
+} from'../../types';
+import { getLabels, type BadgeLabels } from'../i18n/badgeLabels';
+import { AUTO_THEME_DARK, AUTO_THEME_LIGHT, themes } from'./themes';
+import { getTowerAnimationCSS } from'./animations';
+import { DEFAULT_FONTS_BASE64 } from'./fonts';
+import { computeTowers, computeTeamTowers, type TowerData, computeTowerHeight } from'./layout';
+import { LANGUAGE_COLORS } from'./languageColors';
 import {
   sanitizeFont,
   sanitizeHexColor,
@@ -24,7 +24,7 @@ import {
   escapeXML,
   sanitizeSpeed,
   sanitizeCustomText,
-} from './sanitizer';
+} from'./sanitizer';
 
 import {
   GRID_ORIGIN_X,
@@ -34,36 +34,23 @@ import {
   MAX_LOG_HEIGHT,
   MAX_LINEAR_HEIGHT,
   MAX_SQRT_HEIGHT,
-} from './layoutConstants';
+} from'./layoutConstants';
 
-import { SVG_WIDTH, SVG_HEIGHT, MAX_USERNAME_DISPLAY_LENGTH } from './generatorConstants';
+import { SVG_WIDTH, SVG_HEIGHT, MAX_USERNAME_DISPLAY_LENGTH } from'./generatorConstants';
 
 const FONT_MAP = {
-  jetbrains: '"JetBrains Mono", monospace',
-  fira: '"Fira Code", monospace',
-  roboto: '"Roboto", sans-serif',
-  syncopate: '"Syncopate", sans-serif',
-  spacegrotesk: '"Space Grotesk", sans-serif',
-  'space grotesk': '"Space Grotesk", sans-serif',
-  firacode: '"Fira Code", monospace',
-  'jetbrains mono': '"JetBrains Mono", monospace',
-  inter: '"Inter", sans-serif',
-  space: '"Space Grotesk", sans-serif',
+  jetbrains:'"JetBrains Mono", monospace',
+  fira:'"Fira Code", monospace',
+  roboto:'"Roboto", sans-serif',
+  syncopate:'"Syncopate", sans-serif',
+  spacegrotesk:'"Space Grotesk", sans-serif',
+'space grotesk':'"Space Grotesk", sans-serif',
+  firacode:'"Fira Code", monospace',
+'jetbrains mono':'"JetBrains Mono", monospace',
+  inter:'"Inter", sans-serif',
+  space:'"Space Grotesk", sans-serif',
 } as const;
 
-/**
- * Reverse lookup: background hex color -> theme.
- *
- * Built once at module load instead of re-scanning `Object.values(themes)`
- * with `.find()` on every `generateMonthlySVG` call (this function runs on
- * every SVG render request). Lookups are now O(1) via Map.get().
- *
- * Multiple themes can share the same `bg` color (e.g. 'default'/'dark'/
- * 'github' all use '0d1117'). To exactly preserve the original
- * `Object.values(themes).find(...)` behavior — which returns the first
- * match in object-insertion order — we only set a key if it isn't already
- * present, so earlier-declared themes continue to win ties.
- */
 const THEME_BY_BG: Map<string, BadgeTheme> = (() => {
   const map = new Map<string, BadgeTheme>();
   for (const theme of Object.values(themes)) {
@@ -80,7 +67,7 @@ export function resolveFont(sanitizedFont?: string | null): string | null {
 
   return (
     FONT_MAP[sanitizedFont.toLowerCase() as keyof typeof FONT_MAP] ??
-    `"${sanitizedFont}", sans-serif`
+`"${sanitizedFont}", sans-serif`
   );
 }
 
@@ -88,23 +75,23 @@ function isBundledFont(sanitizedFont?: string | null): boolean {
   if (!sanitizedFont) return false;
 
   const fontKey = sanitizedFont.toLowerCase() as keyof typeof FONT_MAP;
-  return fontKey in FONT_MAP && fontKey !== 'inter';
+  return fontKey in FONT_MAP && fontKey !=='inter';
 }
 
-export function getSizeScale(size?: 'small' | 'medium' | 'large') {
-  if (size === 'small') return 400 / SVG_WIDTH;
-  if (size === 'large') return 800 / SVG_WIDTH;
+export function getSizeScale(size?:'small' |'medium' |'large') {
+  if (size ==='small') return 400 / SVG_WIDTH;
+  if (size ==='large') return 800 / SVG_WIDTH;
   return 1;
 }
 
 export function truncateUsername(username: string): string {
   return username.length > MAX_USERNAME_DISPLAY_LENGTH
-    ? `${username.slice(0, MAX_USERNAME_DISPLAY_LENGTH)}...`
+    ?`${username.slice(0, MAX_USERNAME_DISPLAY_LENGTH)}...`
     : username;
 }
 
 export function truncateLabel(label: string): string {
-  return label.length > 40 ? `${label.slice(0, 40)}...` : label;
+  return label.length > 40 ?`${label.slice(0, 40)}...` : label;
 }
 
 export function getUsernameFontSize(username: string): number {
@@ -112,29 +99,22 @@ export function getUsernameFontSize(username: string): number {
   if (len <= 12) return 18;
   return Math.max(10, 18 - (len - 12) * 0.5);
 }
-let currentBackgroundRectBorderAttrs = '';
-/**
- * Renders the foundational background rectangle for all SVG cards.
- * Maintains the 0.5px offset required for crisp SVG stroke rendering on standard DPI screens.
- *
- * @param bg - Background hex color string
- * @param borderRadius - Card border radius in pixels
- */
+let currentBackgroundRectBorderAttrs ='';
 function renderBackgroundRect(
   bg: string,
   borderRadius: number,
   borderAttrsOverride?: string
 ): string {
   const borderAttrs = borderAttrsOverride
-    ? ` ${borderAttrsOverride}`
+    ?` ${borderAttrsOverride}`
     : currentBackgroundRectBorderAttrs
-      ? ` ${currentBackgroundRectBorderAttrs}`
-      : '';
-  return `<rect data-testid="card-bg" x="0.5" y="0.5" rx="${borderRadius}" width="100%" height="100%" fill="${bg}"${borderAttrs}/>`;
+      ?` ${currentBackgroundRectBorderAttrs}`
+      :'';
+  return`<rect data-testid="card-bg" x="0.5" y="0.5" rx="${borderRadius}" width="100%" height="100%" fill="${bg}"${borderAttrs}/>`;
 }
 
 export function deterministicRandom(seed?: string | null): number {
-  const safeSeed = seed || '';
+  const safeSeed = seed ||'';
   let h1 = 0xdeadbeef;
   for (let i = 0; i < safeSeed.length; i++) {
     let k = safeSeed.charCodeAt(i) & 0xff;
@@ -171,7 +151,7 @@ function createScaler(sf: number): Scaler {
 }
 
 export function particleCount(count?: number | null): number {
-  if (typeof count !== 'number' || count <= 0 || Number.isNaN(count)) return 0;
+  if (typeof count !=='number' || count <= 0 || Number.isNaN(count)) return 0;
   return Math.min(5, Math.max(3, Math.floor(count / 4)));
 }
 
@@ -187,9 +167,9 @@ export function buildTowerPaths(h: number, scale: number = 1): TowerPaths {
   const tileFullHeight = 20 * scale;
 
   return {
-    left: `M0 ${tileHalfHeight - h} L0 ${tileHalfHeight} L-${tileHalfWidth} 0 L-${tileHalfWidth} ${-h} Z`,
-    right: `M0 ${tileHalfHeight - h} L0 ${tileHalfHeight} L${tileHalfWidth} 0 L${tileHalfWidth} ${-h} Z`,
-    top: `M0 ${-h} L${tileHalfWidth} ${tileHalfHeight - h} L0 ${tileFullHeight - h} L-${tileHalfWidth} ${tileHalfHeight - h} Z`,
+    left:`M0 ${tileHalfHeight - h} L0 ${tileHalfHeight} L-${tileHalfWidth} 0 L-${tileHalfWidth} ${-h} Z`,
+    right:`M0 ${tileHalfHeight - h} L0 ${tileHalfHeight} L${tileHalfWidth} 0 L${tileHalfWidth} ${-h} Z`,
+    top:`M0 ${-h} L${tileHalfWidth} ${tileHalfHeight - h} L0 ${tileFullHeight - h} L-${tileHalfWidth} ${tileHalfHeight - h} Z`,
   };
 }
 
@@ -200,21 +180,21 @@ function generateParticles(
   count: number,
   sf: number,
   autoTheme: boolean = false,
-  color: string = '',
+  color: string ='',
   animate: boolean = true
 ): string {
-  let particles = '';
+  let particles ='';
   const numParticles = particleCount(count);
 
   for (let i = 0; i < numParticles; i++) {
-    const themeSeed = autoTheme ? 'auto' : color;
-    const seed = `${x}:${y}:${height}:${themeSeed}:${count}:${i}`;
+    const themeSeed = autoTheme ?'auto' : color;
+    const seed =`${x}:${y}:${height}:${themeSeed}:${count}:${i}`;
     const offsetX = deterministicRandom(`${seed}:offsetX`) * 6 - 3;
     const delay = deterministicRandom(`${seed}:delay`) * 1.5;
 
-    const fillAttr = autoTheme ? 'class="sf-accent-fill"' : `fill="${color}"`;
+    const fillAttr = autoTheme ?'class="sf-accent-fill"' :`fill="${color}"`;
 
-    particles += `
+    particles +=`
         <circle ${fillAttr} cx="${x + offsetX}" cy="${y - height}" r="${1.5 * sf}" opacity="1" pointer-events="none">
         ${
           animate
@@ -227,11 +207,11 @@ function generateParticles(
         </circle>
       `;
   }
-  return `<g class="heat-particles" pointer-events="none" focusable="false" aria-hidden="true">${particles}</g>`;
+  return`<g class="heat-particles" pointer-events="none" focusable="false" aria-hidden="true">${particles}</g>`;
 }
 
 export function getInteractiveTowerCSS(accentColorExpr: string): string {
-  return `
+  return`
   .interactive-tower { transition: transform 0.2s ease, filter 0.2s ease; cursor: pointer; }
   .interactive-tower:hover { transform: translateY(-4px); filter: brightness(1.2) drop-shadow(0 4px 8px ${accentColorExpr}); }
   `;
@@ -244,12 +224,12 @@ function renderHeader(
   params: BadgeParams,
   safeId: string
 ): string {
-  const unit = params.mode === 'loc' ? 'est. lines of code' : 'total contributions';
-  const entityPrefix = params.org ? 'Organization ' : params.repo ? 'Repository ' : '';
-  const streakText = `${stats.currentStreak} ${stats.currentStreak === 1 ? 'day' : 'days'}`;
-  const longestStreakText = `${stats.longestStreak} ${stats.longestStreak === 1 ? 'day' : 'days'}`;
+  const unit = params.mode ==='loc' ?'est. lines of code' :'total contributions';
+  const entityPrefix = params.org ?'Organization ' : params.repo ?'Repository ' :'';
+  const streakText =`${stats.currentStreak} ${stats.currentStreak === 1 ? 'day' : 'days'}`;
+  const longestStreakText =`${stats.longestStreak} ${stats.longestStreak === 1 ? 'day' : 'days'}`;
 
-  return `
+  return`
   <title id="sf-title-${safeId}">GitHub ${entityPrefix}streak for ${safeUser} is ${streakText}</title>
   <desc id="sf-desc-${safeId}">${safeUser} has ${stats.totalContributions} ${unit}, a current streak of ${streakText}, and a longest streak of ${longestStreakText}.</desc>
   ${renderDefs(sf, params)}`;
@@ -259,22 +239,22 @@ function generateCustomGradients(params: BadgeParams): { gradients: string; grad
   const stops = parseGradientStops(params.gradient_stops);
 
   if (stops.length < 2) {
-    return { gradients: '', gradientId: '' };
+    return { gradients:'', gradientId:'' };
   }
 
   const coords = getGradientCoordinates(params.gradient_dir);
-  const gradientSignature = `${stops.join('-')}-${params.gradient_dir || 'vertical'}`;
-  const gradientId = `custom-grad-${deterministicRandom(gradientSignature)
+  const gradientSignature =`${stops.join('-')}-${params.gradient_dir || 'vertical'}`;
+  const gradientId =`custom-grad-${deterministicRandom(gradientSignature)
     .toString()
     .slice(2, 10)}`;
 
-  let gradients = '';
+  let gradients ='';
 
   for (let i = 0; i < 4; i++) {
     const level = i + 1;
-    const levelId = `${gradientId}-level-${level}`;
+    const levelId =`${gradientId}-level-${level}`;
 
-    let stopElements = '';
+    let stopElements ='';
     const stopCount = stops.length;
 
     stops.forEach((color, stopIdx) => {
@@ -282,12 +262,12 @@ function generateCustomGradients(params: BadgeParams): { gradients: string; grad
       const baseOpacity = 0.4 + i * 0.2;
       const stopOpacity = Math.min(1, baseOpacity + stopIdx * 0.1);
 
-      const colorHex = color.startsWith('#') ? color : `#${color}`;
-      stopElements += `
+      const colorHex = color.startsWith('#') ? color :`#${color}`;
+      stopElements +=`
           <stop offset="${offset}%" stop-color="${colorHex}" stop-opacity="${stopOpacity}" />`;
     });
 
-    gradients += `
+    gradients +=`
         <linearGradient id="${levelId}" x1="${coords.x1}" y1="${coords.y1}" x2="${coords.x2}" y2="${coords.y2}">
 ${stopElements}
         </linearGradient>`;
@@ -300,19 +280,19 @@ ${stopElements}
 function renderDefs(sf: number, params: BadgeParams): string {
   const fs = (n: number): number => Math.round(n * sf * 10) / 10;
 
-  let gradients = '';
+  let gradients ='';
   if (params.gradient) {
     const result = generateCustomGradients(params);
     if (result.gradientId) {
       gradients = result.gradients;
     } else {
-      const bgStr = params.bg || '0d1117';
-      const bgHex = bgStr.startsWith('#') ? bgStr : `#${bgStr}`;
+      const bgStr = params.bg ||'0d1117';
+      const bgHex = bgStr.startsWith('#') ? bgStr :`#${bgStr}`;
 
       if (params.autoTheme) {
         for (let i = 0; i < 4; i++) {
           const level = i + 1;
-          gradients += `
+          gradients +=`
         <linearGradient id="tower-grad-level-${level}" x1="0" y1="1" x2="0" y2="0">
           <stop offset="0%" stop-color="var(--sf-bg)" stop-opacity="0.1" />
           <stop offset="100%" stop-color="var(--sf-accent)" stop-opacity="${0.4 + i * 0.2}" />
@@ -323,16 +303,16 @@ function renderDefs(sf: number, params: BadgeParams): string {
         const colors = Array.isArray(accent)
           ? [0, 1, 2, 3].map((i) => {
               const idx = Math.min(i, accent.length - 1);
-              const c = accent[idx] || accent[accent.length - 1] || '00ffaa';
-              return c.startsWith('#') ? c : `#${c}`;
+              const c = accent[idx] || accent[accent.length - 1] ||'00ffaa';
+              return c.startsWith('#') ? c :`#${c}`;
             })
           : [0, 1, 2, 3].map(() =>
-              String(accent).startsWith('#') ? String(accent) : `#${accent}`
+              String(accent).startsWith('#') ? String(accent) :`#${accent}`
             );
 
         colors.forEach((c, idx) => {
           const level = idx + 1;
-          gradients += `
+          gradients +=`
         <linearGradient id="tower-grad-level-${level}" x1="0" y1="1" x2="0" y2="0">
           <stop offset="0%" stop-color="${bgHex}" stop-opacity="0.1" />
           <stop offset="100%" stop-color="${c}" stop-opacity="${0.4 + idx * 0.2}" />
@@ -344,37 +324,37 @@ function renderDefs(sf: number, params: BadgeParams): string {
 
   const filterGlow =
     params.glow !== false
-      ? `<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${fs(
+      ?`<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${fs(
           5
         )}" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter>`
-      : '';
+      :'';
 
-  let canvasGradient = '';
-  if (params.bgType === 'linear' || params.bgType === 'radial') {
+  let canvasGradient ='';
+  if (params.bgType ==='linear' || params.bgType ==='radial') {
     const bgStart = params.bgStart
       ? params.bgStart.startsWith('#')
         ? params.bgStart
-        : `#${params.bgStart}`
-      : '#0d1117';
+        :`#${params.bgStart}`
+      :'#0d1117';
     const bgEnd = params.bgEnd
       ? params.bgEnd.startsWith('#')
         ? params.bgEnd
-        : `#${params.bgEnd}`
-      : '#000000';
-    if (params.bgType === 'linear') {
+        :`#${params.bgEnd}`
+      :'#000000';
+    if (params.bgType ==='linear') {
       const angle = params.bgAngle !== undefined ? params.bgAngle : 90;
       const angleRad = (angle - 90) * (Math.PI / 180);
-      const x1 = Math.round(50 + Math.cos(angleRad + Math.PI) * 50) + '%';
-      const y1 = Math.round(50 + Math.sin(angleRad + Math.PI) * 50) + '%';
-      const x2 = Math.round(50 + Math.cos(angleRad) * 50) + '%';
-      const y2 = Math.round(50 + Math.sin(angleRad) * 50) + '%';
-      canvasGradient = `
+      const x1 = Math.round(50 + Math.cos(angleRad + Math.PI) * 50) +'%';
+      const y1 = Math.round(50 + Math.sin(angleRad + Math.PI) * 50) +'%';
+      const x2 = Math.round(50 + Math.cos(angleRad) * 50) +'%';
+      const y2 = Math.round(50 + Math.sin(angleRad) * 50) +'%';
+      canvasGradient =`
         <linearGradient id="canvas-gradient" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
           <stop offset="0%" stop-color="${bgStart}" />
           <stop offset="100%" stop-color="${bgEnd}" />
         </linearGradient>`;
     } else {
-      canvasGradient = `
+      canvasGradient =`
         <radialGradient id="canvas-gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
           <stop offset="0%" stop-color="${bgStart}" />
           <stop offset="100%" stop-color="${bgEnd}" />
@@ -382,7 +362,7 @@ function renderDefs(sf: number, params: BadgeParams): string {
     }
   }
 
-  return `<defs>
+  return`<defs>
       ${filterGlow}
       ${gradients}
       ${canvasGradient}
@@ -397,10 +377,10 @@ function renderStatsSection(
   yOffset = 0
 ): string {
   const totalLabel =
-    params.mode === 'loc' ? 'TOTAL LINES OF CODE (EST.)' : labels.ANNUAL_SYNC_TOTAL;
-  const glowAttr = params.glow !== false ? ' filter="url(#glow)"' : '';
+    params.mode ==='loc' ?'TOTAL LINES OF CODE (EST.)' : labels.ANNUAL_SYNC_TOTAL;
+  const glowAttr = params.glow !== false ?' filter="url(#glow)"' :'';
 
-  return `
+  return`
   <g transform="translate(${s(100)}, ${s(340 + yOffset)})" text-anchor="middle">
     <text class="label">${labels.CURRENT_STREAK}</text>
     <text y="${s(40)}" class="stats"${glowAttr}>${stats.currentStreak}</text>
@@ -428,14 +408,14 @@ function renderStyle(
   accent: string,
   sf: number,
   bg: string,
-  entrance: 'rise' | 'fade' | 'slide' | 'wave' | 'bounce' | 'none' = 'rise'
+  entrance:'rise' |'fade' |'slide' |'wave' |'bounce' |'none' ='rise'
 ): string {
   const fs = (n: number) => Math.round(n * sf * 10) / 10;
   const isLightBg = getLuminance(bg) > 0.5;
   const labelFill = isLightBg ? text : accent;
   const labelOpacity = isLightBg ? 0.8 : 0.7;
 
-  return `
+  return`
   <style>
   ${process.env.NODE_ENV === 'test' ? `@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap');` : DEFAULT_FONTS_BASE64}
   ${googleFontsImport}
@@ -481,7 +461,7 @@ function renderTowers(
   animate: boolean = true,
   isTeamMonolith: boolean = false
 ): string {
-  let towers = '';
+  let towers ='';
   const opacityMultipliers = [0.4, 0.6, 0.8, 1.0];
 
   const theta = params.theta !== undefined ? params.theta : 45;
@@ -495,7 +475,6 @@ function renderTowers(
   const sinTheta = Math.sin(thetaRad);
   const sinPhi = Math.sin(phiRad);
 
-  // Base tile corners relative to the center of the base (unscaled)
   const ax = cosTheta * -d - sinTheta * -d;
   const ay = sinTheta * sinPhi * -d + cosTheta * sinPhi * -d;
   const bx = cosTheta * d - sinTheta * -d;
@@ -510,7 +489,6 @@ function renderTowers(
     return val === 0 ? 0 : val;
   };
 
-  // Scale the local offsets by sf and round to eliminate float noise
   const ax_sf = rnd(ax * sf);
   const ay_sf = rnd(ay * sf);
   const bx_sf = rnd(bx * sf);
@@ -524,37 +502,37 @@ function renderTowers(
 
   for (const t of sortedTowers) {
     const isGhost = t.isGhost;
-    let strokeColor = '';
-    let leftRightFillAttr = '';
-    let topFillAttr = '';
+    let strokeColor ='';
+    let leftRightFillAttr ='';
+    let topFillAttr ='';
 
     if (isAutoTheme) {
-      strokeColor = isGhost ? 'var(--sf-text)' : 'var(--sf-accent)';
-      leftRightFillAttr = isGhost ? 'class="sf-text-fill"' : 'class="sf-accent-fill"';
+      strokeColor = isGhost ?'var(--sf-text)' :'var(--sf-accent)';
+      leftRightFillAttr = isGhost ?'class="sf-text-fill"' :'class="sf-accent-fill"';
       topFillAttr = leftRightFillAttr;
     } else {
       const baseAccentColor = Array.isArray(accent)
-        ? accent[accent.length - 1] || '00ffaa'
-        : accent || '00ffaa';
+        ? accent[accent.length - 1] ||'00ffaa'
+        : accent ||'00ffaa';
 
       const accentColorHex = baseAccentColor.startsWith('#')
         ? baseAccentColor
-        : `#${baseAccentColor}`;
-      const textColorHex = text.startsWith('#') ? text : `#${text}`;
+        :`#${baseAccentColor}`;
+      const textColorHex = text.startsWith('#') ? text :`#${text}`;
 
       let resolvedSolidColor = isGhost ? textColorHex : accentColorHex;
 
       if (isTeamMonolith && Array.isArray(accent)) {
-        const userColor = accent[t.col % accent.length] || '00ffaa';
-        resolvedSolidColor = userColor.startsWith('#') ? userColor : `#${userColor}`;
+        const userColor = accent[t.col % accent.length] ||'00ffaa';
+        resolvedSolidColor = userColor.startsWith('#') ? userColor :`#${userColor}`;
       } else if (!isGhost && t.intensityLevel > 0 && Array.isArray(accent)) {
         const quartileIdx = Math.min(t.intensityLevel - 1, accent.length - 1);
-        const quartileColor = accent[quartileIdx] || accent[accent.length - 1] || '00ffaa';
-        resolvedSolidColor = quartileColor.startsWith('#') ? quartileColor : `#${quartileColor}`;
+        const quartileColor = accent[quartileIdx] || accent[accent.length - 1] ||'00ffaa';
+        resolvedSolidColor = quartileColor.startsWith('#') ? quartileColor :`#${quartileColor}`;
       }
 
       strokeColor = resolvedSolidColor;
-      leftRightFillAttr = `fill="${resolvedSolidColor}"`;
+      leftRightFillAttr =`fill="${resolvedSolidColor}"`;
       topFillAttr = leftRightFillAttr;
     }
 
@@ -576,80 +554,78 @@ function renderTowers(
     if (!isGhost && t.intensityLevel > 0 && params.gradient === true) {
       const customGradId = params.__customGradientId;
       const gradId = customGradId
-        ? `${customGradId}-level-${t.intensityLevel}`
-        : `tower-grad-level-${t.intensityLevel}`;
+        ?`${customGradId}-level-${t.intensityLevel}`
+        :`tower-grad-level-${t.intensityLevel}`;
 
-      leftFillAttr = `fill="url(#${gradId})"`;
-      rightFillAttr = `fill="url(#${gradId})"`;
+      leftFillAttr =`fill="url(#${gradId})"`;
+      rightFillAttr =`fill="url(#${gradId})"`;
 
       if (isAutoTheme) {
-        finalTopFillAttr = 'class="sf-accent-fill"';
+        finalTopFillAttr ='class="sf-accent-fill"';
       } else {
         const capIdx = Math.min(t.intensityLevel - 1, accent.length - 1);
         const baseAccentColor = Array.isArray(accent)
           ? accent[capIdx] || accent[accent.length - 1]
           : accent;
-        const capColor = baseAccentColor.startsWith('#') ? baseAccentColor : `#${baseAccentColor}`;
-        finalTopFillAttr = `fill="${capColor}"`;
+        const capColor = baseAccentColor.startsWith('#') ? baseAccentColor :`#${baseAccentColor}`;
+        finalTopFillAttr =`fill="${capColor}"`;
       }
     }
 
     const strokeAttr = isGhost
-      ? `stroke="${strokeColor}" stroke-opacity="${t.strokeOpacity}" stroke-width="${t.strokeWidth}"`
-      : '';
+      ?`stroke="${strokeColor}" stroke-opacity="${t.strokeOpacity}" stroke-width="${t.strokeWidth}"`
+      :'';
 
     let leftStrokeAttr = strokeAttr;
     let rightStrokeAttr = strokeAttr;
     let topStrokeAttr = strokeAttr;
 
     if (t.isToday && t.contributionCount === 0) {
-      const todayStrokeColor = isAutoTheme ? 'var(--sf-accent)' : strokeColor;
+      const todayStrokeColor = isAutoTheme ?'var(--sf-accent)' : strokeColor;
       leftStrokeAttr = isGhost
-        ? `stroke="${strokeColor}" stroke-opacity="${t.strokeOpacity}" stroke-width="${t.strokeWidth}"`
-        : '';
+        ?`stroke="${strokeColor}" stroke-opacity="${t.strokeOpacity}" stroke-width="${t.strokeWidth}"`
+        :'';
       rightStrokeAttr = leftStrokeAttr;
-      topStrokeAttr = `stroke="${todayStrokeColor}" stroke-opacity="0.8" stroke-width="${1.2 * sf}"`;
+      topStrokeAttr =`stroke="${todayStrokeColor}" stroke-opacity="0.8" stroke-width="${1.2 * sf}"`;
     }
 
     const delay = ((t.row + t.col) * 0.015).toFixed(3);
 
     const metric =
-      t.contributionCount === 0 ? 'Rest day' : t.intensityLevel === 4 ? 'Peak day' : 'Active day';
+      t.contributionCount === 0 ?'Rest day' : t.intensityLevel === 4 ?'Peak day' :'Active day';
 
     const isWeekend = t.col === 0 || t.col === 6;
     const shouldDim = params.dim_weekends && isWeekend;
-    const dimAttr = shouldDim ? ' class="dimmed-tower" style="opacity: 0.3;"' : '';
+    const dimAttr = shouldDim ?' class="dimmed-tower" style="opacity: 0.3;"' :'';
 
-    // Calculate dynamic 3D coordinates based on row, col, theta, phi
     const gridX = t.row * 16 * Math.sqrt(2);
     const gridY = t.col * 16 * Math.sqrt(2);
 
     const x_base = cosTheta * gridX - sinTheta * gridY;
     const y_base = sinTheta * sinPhi * gridX + cosTheta * sinPhi * gridY;
 
-    // Apply scaling factor (sf) and add origin offsets
     const towerX = Math.round((GRID_ORIGIN_X + x_base) * sf);
     const towerY = Math.round((GRID_ORIGIN_Y + y_base) * sf);
 
     const hOffset = t.h;
 
     const paths = {
-      left: `M${cx_sf} ${rnd(cy_sf - hOffset)} L${cx_sf} ${cy_sf} L${dx_sf} ${dy_sf} L${dx_sf} ${rnd(dy_sf - hOffset)} Z`,
-      right: `M${cx_sf} ${rnd(cy_sf - hOffset)} L${cx_sf} ${cy_sf} L${bx_sf} ${by_sf} L${bx_sf} ${rnd(by_sf - hOffset)} Z`,
-      top: `M${ax_sf} ${rnd(ay_sf - hOffset)} L${bx_sf} ${rnd(by_sf - hOffset)} L${cx_sf} ${rnd(cy_sf - hOffset)} L${dx_sf} ${rnd(dy_sf - hOffset)} Z`,
+      left:`M${cx_sf} ${rnd(cy_sf - hOffset)} L${cx_sf} ${cy_sf} L${dx_sf} ${dy_sf} L${dx_sf} ${rnd(dy_sf - hOffset)} Z`,
+      right:`M${cx_sf} ${rnd(cy_sf - hOffset)} L${cx_sf} ${cy_sf} L${bx_sf} ${by_sf} L${bx_sf} ${rnd(by_sf - hOffset)} Z`,
+      top:`M${ax_sf} ${rnd(ay_sf - hOffset)} L${bx_sf} ${rnd(by_sf - hOffset)} L${cx_sf} ${rnd(cy_sf - hOffset)} L${dx_sf} ${rnd(dy_sf - hOffset)} Z`,
     };
 
-    let shadowMarkup = '';
+    let shadowMarkup ='';
     if (!isGhost && hOffset > 0) {
       const vx = rnd(-hOffset * 0.7);
       const vy = rnd(-hOffset * 0.35);
-      const shadowPath = `M${cx_sf} ${cy_sf} L${bx_sf} ${by_sf} L${rnd(bx_sf + vx)} ${rnd(by_sf + vy)} L${rnd(ax_sf + vx)} ${rnd(ay_sf + vy)} L${rnd(dx_sf + vx)} ${rnd(dy_sf + vy)} L${dx_sf} ${dy_sf} Z`;
-      const shadowColor = isAutoTheme ? 'var(--sf-negative, #000000)' : '#000000';
+      const shadowPath =`M${cx_sf} ${cy_sf} L${bx_sf} ${by_sf} L${rnd(bx_sf + vx)} ${rnd(by_sf + vy)} L${rnd(ax_sf + vx)} ${rnd(ay_sf + vy)} L${rnd(dx_sf + vx)} ${rnd(dy_sf + vy)} L${dx_sf} ${dy_sf} Z`;
+      const shadowColor = isAutoTheme ?'var(--sf-negative, #000000)' :'#000000';
       const shadowOpacity = parseFloat((0.15 * opacity).toFixed(2));
-      shadowMarkup = `<path d="${shadowPath}" fill="${shadowColor}" fill-opacity="${shadowOpacity}" />`;
+      shadowMarkup =`<path d="${shadowPath}" fill="${shadowColor}" fill-opacity="${shadowOpacity}" />`;
     }
 
-    towers += `
+    towers +=`
         <g transform="translate(${towerX}, ${towerY})"${dimAttr}>
           ${shadowMarkup}
           <g class="sf-tower interactive-tower" data-date="${escapeXML(t.date)}" data-count="${t.contributionCount}" data-metric="${escapeXML(metric)}" style="animation-delay: ${delay}s;">
@@ -665,13 +641,13 @@ function renderTowers(
     if (t.contributionCount >= 10 && !params.disable_particles) {
       const pIdx = Math.min(t.intensityLevel - 1, accent.length - 1);
       const pColorResolved = Array.isArray(accent)
-        ? accent[pIdx] || accent[accent.length - 1] || '00ffaa'
-        : accent || '00ffaa';
+        ? accent[pIdx] || accent[accent.length - 1] ||'00ffaa'
+        : accent ||'00ffaa';
       const pColor = isAutoTheme
-        ? ''
+        ?''
         : pColorResolved.startsWith('#')
           ? pColorResolved
-          : `#${pColorResolved}`;
+          :`#${pColorResolved}`;
       let particlesMarkup = generateParticles(
         towerX,
         towerY,
@@ -683,7 +659,7 @@ function renderTowers(
         animate
       );
       if (shouldDim) {
-        particlesMarkup = `<g class="dimmed-tower" style="opacity: 0.3;">${particlesMarkup}</g>`;
+        particlesMarkup =`<g class="dimmed-tower" style="opacity: 0.3;">${particlesMarkup}</g>`;
       }
       towers += particlesMarkup;
     }
@@ -700,9 +676,9 @@ function renderRadarScan(
   const safeSpeed = sanitizeSpeed(speed);
   const s = createScaler(sf);
   const fillAttr = autoTheme
-    ? 'class="sf-accent-fill scan-line"'
-    : `fill="${accentColor}" class="sf-accent-fill scan-line"`;
-  return `<rect
+    ?'class="sf-accent-fill scan-line"'
+    :`fill="${accentColor}" class="sf-accent-fill scan-line"`;
+  return`<rect
     x="${s(100)}"
     y="${s(80)}"
     width="${s(400)}"
@@ -726,38 +702,36 @@ function renderFooter(
   const fs = (n: number): number => Math.round(n * sf * 10) / 10;
   const statsOffset = params.label === false ? -40 : 0;
 
-  // Static themes do not define the .sf-accent-fill CSS rule, so the scan line needs an
-  // explicit fill or it inherits the SVG default fill="none" and becomes invisible.
   const scanLineFill = params.autoTheme
-    ? 'class="sf-accent-fill scan-line"'
-    : `fill="${accent}" class="sf-accent-fill scan-line"`;
+    ?'class="sf-accent-fill scan-line"'
+    :`fill="${accent}" class="sf-accent-fill scan-line"`;
 
   const displayTitle =
-    typeof params.label === 'string'
+    typeof params.label ==='string'
       ? sanitizeCustomText(truncateLabel(params.label))
       : params.custom_title
         ? sanitizeCustomText(params.custom_title)
-        : `${truncateUsername(safeUser).toUpperCase()}${isWinner ? ' 👑' : ''}`;
+        :`${truncateUsername(safeUser).toUpperCase()}${isWinner ? ' 👑' : ''}`;
 
-  const titleText = `${displayTitle}${
+  const titleText =`${displayTitle}${
     params.isOfflineFallback
       ? '<tspan fill="#ff9f43" font-size="10px" font-weight="bold"> [STALE CACHE]</tspan>'
       : ''
   }`;
 
   const titleFontSize = getUsernameFontSize(
-    typeof params.label === 'string'
+    typeof params.label ==='string'
       ? truncateLabel(params.label)
       : params.custom_title || truncateUsername(safeUser)
   );
 
-  let subtitleElement = '';
+  let subtitleElement ='';
   if (params.custom_subtitle && !params.hide_title && params.label !== false) {
     const safeSubtitle = sanitizeCustomText(params.custom_subtitle);
-    subtitleElement = `\n  <text x="${s(300)}" y="${s(68)}" text-anchor="middle" class="subtitle">${safeSubtitle}</text>`;
+    subtitleElement =`\n  <text x="${s(300)}" y="${s(68)}" text-anchor="middle" class="subtitle">${safeSubtitle}</text>`;
   }
 
-  return `
+  return`
   ${!params.hide_stats ? renderStatsSection(stats, labels, s, params, statsOffset) : ''}
 
   ${
@@ -778,18 +752,18 @@ function renderFooter(
 }
 
 const MONTH_NAMES = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+'Jan',
+'Feb',
+'Mar',
+'Apr',
+'May',
+'Jun',
+'Jul',
+'Aug',
+'Sep',
+'Oct',
+'Nov',
+'Dec',
 ];
 
 const ISOMETRIC_VERTICAL_OFFSET = 20;
@@ -802,14 +776,14 @@ function renderIsometricLabels(
   color: string,
   sf: number
 ): string {
-  if (!params.labels) return '';
+  if (!params.labels) return'';
 
   const s = createScaler(sf);
-  let elements = '';
+  let elements ='';
 
   const weeks = calendar.weeks.slice(-14);
   const monthLabels: { text: string; col: number }[] = [];
-  let prevMonthStr = '';
+  let prevMonthStr ='';
 
   weeks.forEach((week, i) => {
     if (week.contributionDays.length === 0) return;
@@ -824,8 +798,8 @@ function renderIsometricLabels(
   });
   let labelColorHex = color;
   if (params.labelColor) {
-    const fallbackHex = color.replace(/^#/, '') || 'ffffff';
-    labelColorHex = `#${sanitizeHexColor(params.labelColor, fallbackHex)}`;
+    const fallbackHex = color.replace(/^#/,'') ||'ffffff';
+    labelColorHex =`#${sanitizeHexColor(params.labelColor, fallbackHex)}`;
   }
 
   monthLabels.forEach((label) => {
@@ -836,14 +810,14 @@ function renderIsometricLabels(
           (label.col + MONTH_LABEL_ROW_OFFSET) * TILE_HEIGHT_HALF +
           ISOMETRIC_VERTICAL_OFFSET
       ) + Math.round(20 * sf);
-    elements += `
+    elements +=`
     <text x="${tx}" y="${ty}" text-anchor="middle" fill="${labelColorHex}" class="isometric-label">${label.text}</text>`;
   });
 
   const weekdays = [
-    { text: 'Mon', row: 1 },
-    { text: 'Wed', row: 3 },
-    { text: 'Fri', row: 5 },
+    { text:'Mon', row: 1 },
+    { text:'Wed', row: 3 },
+    { text:'Fri', row: 5 },
   ];
 
   weekdays.forEach((day) => {
@@ -854,11 +828,11 @@ function renderIsometricLabels(
           (WEEKDAY_LABEL_COL_OFFSET + day.row) * TILE_HEIGHT_HALF +
           ISOMETRIC_VERTICAL_OFFSET
       ) + Math.round(20 * sf);
-    elements += `
+    elements +=`
     <text x="${tx}" y="${ty}" text-anchor="end" fill="${labelColorHex}" class="isometric-label">${day.text}</text>`;
   });
 
-  return `<g class="isometric-labels">${elements}</g>`;
+  return`<g class="isometric-labels">${elements}</g>`;
 }
 
 function renderTeamIsometricLabels(
@@ -876,24 +850,24 @@ function getInlineMilestoneBadge(
   cx: number,
   cy: number
 ): string {
-  let color = '';
-  let path = '';
+  let color ='';
+  let path ='';
   if (streak >= 365) {
-    color = '#FFD700';
+    color ='#FFD700';
     path =
-      '<path d="M12 2c0 0-4.5 4.5-4.5 8.5C7.5 13.5 10 16 12 16c2 0 4.5-2.5 4.5-5.5C16.5 6.5 12 2 12 2z" fill="currentColor"/>';
+'<path d="M12 2c0 0-4.5 4.5-4.5 8.5C7.5 13.5 10 16 12 16c2 0 4.5-2.5 4.5-5.5C16.5 6.5 12 2 12 2z" fill="currentColor"/>';
   } else if (streak >= 100) {
-    color = '#C0C0C0';
+    color ='#C0C0C0';
     path =
-      '<path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z" fill="currentColor"/>';
+'<path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z" fill="currentColor"/>';
   } else if (streak >= 30) {
-    color = '#CD7F32';
+    color ='#CD7F32';
     path =
-      '<path d="M12 2L3 6v5.5c0 5 3.8 9.6 9 10.5 5.2-.9 9-5.5 9-10.5V6l-9-4z" fill="currentColor"/>';
+'<path d="M12 2L3 6v5.5c0 5 3.8 9.6 9 10.5 5.2-.9 9-5.5 9-10.5V6l-9-4z" fill="currentColor"/>';
   } else {
-    return '';
+    return'';
   }
-  return `
+  return`
     <g transform="translate(${s(cx)}, ${s(cy)})" color="${color}" class="milestone-inline-badge">
       <svg x="0" y="0" width="${s(14)}" height="${s(14)}" viewBox="0 0 24 24">
         ${path}
@@ -903,23 +877,23 @@ function getInlineMilestoneBadge(
 }
 
 function renderMilestoneBadges(stats: StreakStats, params: BadgeParams, sf: number): string {
-  if (!params.badges) return '';
+  if (!params.badges) return'';
 
   const badges = [];
-  if (stats.longestStreak >= 365) badges.push({ text: '🔥 Unstoppable', color: '#FFD700' });
-  else if (stats.longestStreak >= 100) badges.push({ text: '💯 Century Club', color: '#C0C0C0' });
+  if (stats.longestStreak >= 365) badges.push({ text:'🔥 Unstoppable', color:'#FFD700' });
+  else if (stats.longestStreak >= 100) badges.push({ text:'💯 Century Club', color:'#C0C0C0' });
 
-  if (stats.totalContributions >= 5000) badges.push({ text: '🌟 Elite', color: '#b9f2ff' });
-  else if (stats.totalContributions >= 1000) badges.push({ text: '🚀 1K Club', color: '#cd7f32' });
+  if (stats.totalContributions >= 5000) badges.push({ text:'🌟 Elite', color:'#b9f2ff' });
+  else if (stats.totalContributions >= 1000) badges.push({ text:'🚀 1K Club', color:'#cd7f32' });
   else if (stats.totalContributions >= 500)
-    badges.push({ text: '⭐ 500+ Commits', color: '#cd7f32' });
+    badges.push({ text:'⭐ 500+ Commits', color:'#cd7f32' });
 
-  if (badges.length === 0) return '';
+  if (badges.length === 0) return'';
 
   const fs = (n: number) => Math.round(n * sf * 10) / 10;
   const s = createScaler(sf);
 
-  let elements = '';
+  let elements ='';
   const badgeWidth = 110;
   const spacing = 10;
   const totalWidth = badges.length * badgeWidth + (badges.length - 1) * spacing;
@@ -928,9 +902,9 @@ function renderMilestoneBadges(stats: StreakStats, params: BadgeParams, sf: numb
   badges.forEach((b, i) => {
     const cx = s(startX + i * (badgeWidth + spacing));
     const cy = s(400);
-    const glowAttr = params.glow !== false ? ' filter="url(#glow)"' : '';
+    const glowAttr = params.glow !== false ?' filter="url(#glow)"' :'';
 
-    elements += `
+    elements +=`
       <g transform="translate(${cx}, ${cy})" class="badge-group">
         <rect x="${s(-badgeWidth / 2)}" y="${s(-12)}" width="${s(badgeWidth)}" height="${s(24)}" rx="${s(12)}" fill="${b.color}" fill-opacity="0.1" stroke="${b.color}" stroke-opacity="0.5" stroke-width="1" />
         <text y="${s(4)}" text-anchor="middle" font-family='"Roboto", sans-serif' font-size="${fs(11)}px" font-weight="bold" fill="${b.color}" ${glowAttr}>${b.text}</text>
@@ -938,7 +912,7 @@ function renderMilestoneBadges(stats: StreakStats, params: BadgeParams, sf: numb
     `;
   });
 
-  return `<g class="milestone-badges">${elements}</g>`;
+  return`<g class="milestone-badges">${elements}</g>`;
 }
 
 export function generateSVG(
@@ -950,47 +924,46 @@ export function generateSVG(
   if (params.autoTheme) return generateAutoThemeSVG(stats, params, calendar, individualCalendars);
   if (params.compact) return generateCompactSVG(stats, params);
 
-  const rawBorderWidth = String(params.border || '').trim();
-  let safeBorderWidth: string | number = 0; // Default to 0 (no border) if invalid
+  const rawBorderWidth = String(params.border ||'').trim();
+  let safeBorderWidth: string | number = 0;
 
   if (/^\d+$/.test(rawBorderWidth)) {
     safeBorderWidth = parseInt(rawBorderWidth, 10);
   } else if (
-    /^#[0-9a-fA-F]{3,6}$/.test(rawBorderWidth) ||
-    /^[0-9a-fA-F]{3,6}$/.test(rawBorderWidth)
+/^#[0-9a-fA-F]{3,6}$/.test(rawBorderWidth) ||
+/^[0-9a-fA-F]{3,6}$/.test(rawBorderWidth)
   ) {
-    // If it's a valid hex code (with or without #), consider it a valid border and give it a default thickness
     safeBorderWidth = 2;
-  } else if (['none', 'thin', 'medium', 'thick'].includes(rawBorderWidth.toLowerCase())) {
+  } else if (['none','thin','medium','thick'].includes(rawBorderWidth.toLowerCase())) {
     safeBorderWidth = rawBorderWidth.toLowerCase();
   }
 
   const animate = params.animate ?? true;
-  const safeUser = escapeXML(params.user || 'GitHub User');
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const safeUser = escapeXML(params.user ||'GitHub User');
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
   const bgFill =
-    params.bgType === 'linear' || params.bgType === 'radial' ? 'url(#canvas-gradient)' : bg;
+    params.bgType ==='linear' || params.bgType ==='radial' ?'url(#canvas-gradient)' : bg;
 
   const accent = Array.isArray(params.accent)
-    ? params.accent.map((c) => sanitizeHexColor(c, '00ffaa'))
-    : sanitizeHexColor(params.accent, '00ffaa');
+    ? params.accent.map((c) => sanitizeHexColor(c,'00ffaa'))
+    : sanitizeHexColor(params.accent,'00ffaa');
 
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const borderAttr = safeBorderWidth
-    ? `stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
-    : '';
+    ?`stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
+    :'';
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
 
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const sf = getSizeScale(params.size);
   const radius = sanitizeRadius(params.radius, 8) * sf;
@@ -1022,17 +995,17 @@ export function generateSVG(
   );
 
   const mainAccent = Array.isArray(accent)
-    ? accent[accent.length - 1] || '00ffaa'
-    : accent || '00ffaa';
-  const mainAccentHex = mainAccent.startsWith('#') ? mainAccent : `#${mainAccent}`;
+    ? accent[accent.length - 1] ||'00ffaa'
+    : accent ||'00ffaa';
+  const mainAccentHex = mainAccent.startsWith('#') ? mainAccent :`#${mainAccent}`;
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
   const previousBackgroundRectBorderAttrs = currentBackgroundRectBorderAttrs;
   currentBackgroundRectBorderAttrs = borderAttr;
 
   try {
-    return `
+    return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   ${renderHeader(safeUser, stats, sf, params, safeId)}
   ${renderStyle(selectedFont, statsFont, googleFontsImport, text, mainAccentHex, sf, bg, params.entrance || 'rise')}
@@ -1052,57 +1025,56 @@ export function generateSVG(
 }
 
 function generateCompactSVG(stats: StreakStats, params: BadgeParams): string {
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const safeUser = escapeXML(params.user ||'GitHub User');
 
-  const rawBorderWidth = String(params.border || '').trim();
-  let safeBorderWidth: string | number = 0; // Default to 0 (no border) if invalid
+  const rawBorderWidth = String(params.border ||'').trim();
+  let safeBorderWidth: string | number = 0;
 
   if (/^\d+$/.test(rawBorderWidth)) {
     safeBorderWidth = parseInt(rawBorderWidth, 10);
   } else if (/^#[0-9a-fA-F]{3,6}$/.test(rawBorderWidth)) {
-    // If it's a valid hex color code, treat it as valid and give it a default thickness of 2
     safeBorderWidth = 2;
-  } else if (['none', 'thin', 'medium', 'thick'].includes(rawBorderWidth.toLowerCase())) {
+  } else if (['none','thin','medium','thick'].includes(rawBorderWidth.toLowerCase())) {
     safeBorderWidth = rawBorderWidth.toLowerCase();
   }
 
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const accentRaw = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = `#${sanitizeHexColor(accentRaw, '00ffaa')}`;
+  const accent =`#${sanitizeHexColor(accentRaw, '00ffaa')}`;
 
   const borderAttr = safeBorderWidth
-    ? `stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
-    : '';
+    ?`stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
+    :'';
 
   const radius = sanitizeRadius(params.radius, 12);
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const width = 280;
   const height = 100;
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
-  const titleText = `${truncateUsername(safeUser)}${
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
+  const titleText =`${truncateUsername(safeUser)}${
     params.isOfflineFallback ? ' [STALE CACHE]' : ''
   }`;
 
   const previousBackgroundRectBorderAttrs = currentBackgroundRectBorderAttrs;
   currentBackgroundRectBorderAttrs = borderAttr;
-  const streakText = `${stats.currentStreak} ${stats.currentStreak === 1 ? 'day' : 'days'}`;
+  const streakText =`${stats.currentStreak} ${stats.currentStreak === 1 ? 'day' : 'days'}`;
 
   try {
-    return `
+    return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   <title id="sf-title-${safeId}">GitHub streak for ${safeUser} is ${streakText}</title>
   <desc id="sf-desc-${safeId}">${safeUser} has a current streak of ${streakText} and total contributions of ${stats.totalContributions}.</desc>
@@ -1129,18 +1101,18 @@ function generateAutoThemeSVG(
 ): string {
   const light = AUTO_THEME_LIGHT;
   const dark = AUTO_THEME_DARK;
-  const lightLabelFill = getLuminance(light.bg) > 0.5 ? 'var(--sf-text)' : 'var(--sf-accent)';
-  const lightLabelOpacity = getLuminance(light.bg) > 0.5 ? '0.8' : '0.7';
-  const darkLabelFill = getLuminance(dark.bg) > 0.5 ? 'var(--sf-text)' : 'var(--sf-accent)';
-  const darkLabelOpacity = getLuminance(dark.bg) > 0.5 ? '0.8' : '0.7';
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const lightLabelFill = getLuminance(light.bg) > 0.5 ?'var(--sf-text)' :'var(--sf-accent)';
+  const lightLabelOpacity = getLuminance(light.bg) > 0.5 ?'0.8' :'0.7';
+  const darkLabelFill = getLuminance(dark.bg) > 0.5 ?'var(--sf-text)' :'var(--sf-accent)';
+  const darkLabelOpacity = getLuminance(dark.bg) > 0.5 ?'0.8' :'0.7';
+  const safeUser = escapeXML(params.user ||'GitHub User');
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart = sanitizedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
   const sf = getSizeScale(params.size);
   const radius = sanitizeRadius(params.radius, 8) * sf;
   const labels = getLabels(params.lang);
@@ -1158,8 +1130,8 @@ function generateAutoThemeSVG(
   const towers = renderTowers(
     towerData,
     params,
-    '',
-    '',
+'',
+'',
     sf,
     true,
     params.opacity ?? 1.0,
@@ -1170,34 +1142,34 @@ function generateAutoThemeSVG(
   const s = createScaler(sf);
   const fs = (n: number): number => Math.round(n * sf * 10) / 10;
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
   const displayTitle =
-    typeof params.label === 'string'
+    typeof params.label ==='string'
       ? sanitizeCustomText(truncateLabel(params.label))
       : params.custom_title
         ? sanitizeCustomText(params.custom_title)
         : truncateUsername(safeUser).toUpperCase();
 
-  const titleText = `${displayTitle}${
+  const titleText =`${displayTitle}${
     params.isOfflineFallback
       ? '<tspan fill="#ff9f43" font-size="10px" font-weight="bold"> [STALE CACHE]</tspan>'
       : ''
   }`;
 
   const titleFontSize = getUsernameFontSize(
-    typeof params.label === 'string'
+    typeof params.label ==='string'
       ? truncateLabel(params.label)
       : params.custom_title || truncateUsername(safeUser)
   );
 
-  let subtitleElement = '';
+  let subtitleElement ='';
   if (params.custom_subtitle && !params.hide_title && params.label !== false) {
     const safeSubtitle = sanitizeCustomText(params.custom_subtitle);
-    subtitleElement = `\n  <text x="${s(300)}" y="${s(68)}" text-anchor="middle" class="subtitle">${safeSubtitle}</text>`;
+    subtitleElement =`\n  <text x="${s(300)}" y="${s(68)}" text-anchor="middle" class="subtitle">${safeSubtitle}</text>`;
   }
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${W}"
@@ -1274,31 +1246,31 @@ function computeDeltaText(
   deltaUnit: string,
   deltaFormat: BadgeParams['delta_format']
 ): string {
-  if (deltaFormat === 'absolute') {
+  if (deltaFormat ==='absolute') {
     return stats.deltaAbsolute > 0
-      ? `+${stats.deltaAbsolute} ${deltaUnit}`
+      ?`+${stats.deltaAbsolute} ${deltaUnit}`
       : stats.deltaAbsolute === 0
-        ? `0 ${deltaUnit}`
-        : `${stats.deltaAbsolute} ${deltaUnit}`;
+        ?`0 ${deltaUnit}`
+        :`${stats.deltaAbsolute} ${deltaUnit}`;
   }
 
-  if (deltaFormat === 'both') {
+  if (deltaFormat ==='both') {
     return stats.deltaPercentage === null
-      ? `N/A (${stats.deltaAbsolute > 0 ? '+' : ''}${stats.deltaAbsolute})`
+      ?`N/A (${stats.deltaAbsolute > 0 ? '+' : ''}${stats.deltaAbsolute})`
       : stats.deltaPercentage > 0
-        ? `+${stats.deltaPercentage}% (+${stats.deltaAbsolute})`
+        ?`+${stats.deltaPercentage}% (+${stats.deltaAbsolute})`
         : stats.deltaPercentage < 0
-          ? `${stats.deltaPercentage}% (${stats.deltaAbsolute})`
-          : `0% (${stats.deltaAbsolute > 0 ? '+' : ''}${stats.deltaAbsolute})`;
+          ?`${stats.deltaPercentage}% (${stats.deltaAbsolute})`
+          :`0% (${stats.deltaAbsolute > 0 ? '+' : ''}${stats.deltaAbsolute})`;
   }
 
   return stats.deltaPercentage === null
-    ? 'N/A'
+    ?'N/A'
     : stats.deltaPercentage > 0
-      ? `+${stats.deltaPercentage}%`
+      ?`+${stats.deltaPercentage}%`
       : stats.deltaPercentage < 0
-        ? `${stats.deltaPercentage}%`
-        : `0%`;
+        ?`${stats.deltaPercentage}%`
+        :`0%`;
 }
 
 export function generateMonthlySVG(stats: MonthlyStats, params: BadgeParams): string {
@@ -1306,22 +1278,22 @@ export function generateMonthlySVG(stats: MonthlyStats, params: BadgeParams): st
     return generateAutoThemeMonthlySVG(stats, params);
   }
 
-  const safeUser = escapeXML(params.user || 'GitHub User');
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const safeUser = escapeXML(params.user ||'GitHub User');
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
   const bgFill =
-    params.bgType === 'linear' || params.bgType === 'radial' ? 'url(#canvas-gradient)' : bg;
+    params.bgType ==='linear' || params.bgType ==='radial' ?'url(#canvas-gradient)' : bg;
 
   const rawAccent = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = `#${sanitizeHexColor(rawAccent, '00ffaa')}`;
+  const accent =`#${sanitizeHexColor(rawAccent, '00ffaa')}`;
 
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const radius = sanitizeRadius(params.radius, 8);
   const labels = getLabels(params.lang);
 
@@ -1331,30 +1303,30 @@ export function generateMonthlySVG(stats: MonthlyStats, params: BadgeParams): st
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const commitsLabel =
-    params.mode === 'loc' ? 'LINES THIS MONTH (EST.)' : labels.COMMITS_THIS_MONTH;
-  const deltaUnit = params.mode === 'loc' ? 'LINES (EST.)' : 'commits';
+    params.mode ==='loc' ?'LINES THIS MONTH (EST.)' : labels.COMMITS_THIS_MONTH;
+  const deltaUnit = params.mode ==='loc' ?'LINES (EST.)' :'commits';
 
   const deltaText = computeDeltaText(stats, deltaUnit, params.delta_format);
-  let negativeColor = '#ff4444';
-  const cleanBg = sanitizeHexColor(params.bg, '0d1117');
+  let negativeColor ='#ff4444';
+  const cleanBg = sanitizeHexColor(params.bg,'0d1117');
   const matchedTheme = THEME_BY_BG.get(cleanBg.toLowerCase());
 
   if (matchedTheme && matchedTheme.negative) {
-    negativeColor = `#${matchedTheme.negative}`;
+    negativeColor =`#${matchedTheme.negative}`;
   } else {
     const luminance = getLuminance(cleanBg);
-    negativeColor = luminance > 0.5 ? '#cf222e' : '#f85149';
+    negativeColor = luminance > 0.5 ?'#cf222e' :'#f85149';
   }
 
   const deltaColor = stats.deltaAbsolute >= 0 ? accent : negativeColor;
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -1404,35 +1376,34 @@ export function generateWrappedSVG(
   year: string,
   calendar: ContributionCalendar
 ): string {
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const safeUser = escapeXML(params.user ||'GitHub User');
 
-  const rawBorderWidth = String(params.border || '').trim();
-  let safeBorderWidth: string | number = 0; // Default fallback width
+  const rawBorderWidth = String(params.border ||'').trim();
+  let safeBorderWidth: string | number = 0;
 
   if (/^\d+$/.test(rawBorderWidth)) {
     safeBorderWidth = parseInt(rawBorderWidth, 10);
   } else if (/^#[0-9a-fA-F]{3,6}$/.test(rawBorderWidth)) {
-    // If it's a valid hex color code, treat it as valid and give it a default thickness of 2
     safeBorderWidth = 2;
-  } else if (['none', 'thin', 'medium', 'thick'].includes(rawBorderWidth.toLowerCase())) {
+  } else if (['none','thin','medium','thick'].includes(rawBorderWidth.toLowerCase())) {
     safeBorderWidth = rawBorderWidth.toLowerCase();
   }
 
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
   const bgFill =
-    params.bgType === 'linear' || params.bgType === 'radial' ? 'url(#canvas-gradient)' : bg;
+    params.bgType ==='linear' || params.bgType ==='radial' ?'url(#canvas-gradient)' : bg;
 
   const rawAccent = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = `#${sanitizeHexColor(rawAccent, '00ffaa')}`;
+  const accent =`#${sanitizeHexColor(rawAccent, '00ffaa')}`;
 
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const radius = sanitizeRadius(params.radius, 8);
 
   const width = sanitizeDimension(params.width, 420, 100, 1200);
@@ -1441,50 +1412,50 @@ export function generateWrappedSVG(
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const MONTH_NAMES: Record<string, string> = {
-    '01': 'JANUARY',
-    '02': 'FEBRUARY',
-    '03': 'MARCH',
-    '04': 'APRIL',
-    '05': 'MAY',
-    '06': 'JUNE',
-    '07': 'JULY',
-    '08': 'AUGUST',
-    '09': 'SEPTEMBER',
-    '10': 'OCTOBER',
-    '11': 'NOVEMBER',
-    '12': 'DECEMBER',
+'01':'JANUARY',
+'02':'FEBRUARY',
+'03':'MARCH',
+'04':'APRIL',
+'05':'MAY',
+'06':'JUNE',
+'07':'JULY',
+'08':'AUGUST',
+'09':'SEPTEMBER',
+'10':'OCTOBER',
+'11':'NOVEMBER',
+'12':'DECEMBER',
   };
   const monthPart = stats.busiestMonth?.split('-')[1];
   const monthName = monthPart
     ? MONTH_NAMES[monthPart] || stats.busiestMonth
-    : stats.busiestMonth || 'N/A';
+    : stats.busiestMonth ||'N/A';
 
   function formatActiveDate(dateStr: string): string {
-    if (!dateStr) return 'N/A';
+    if (!dateStr) return'N/A';
     const parts = dateStr.split('-');
     const mPart = parts[1];
     const dPart = parts[2];
     if (!mPart || !dPart) return dateStr;
     const monthAbbrs: Record<string, string> = {
-      '01': 'Jan',
-      '02': 'Feb',
-      '03': 'Mar',
-      '04': 'Apr',
-      '05': 'May',
-      '06': 'Jun',
-      '07': 'Jul',
-      '08': 'Aug',
-      '09': 'Sep',
-      '10': 'Oct',
-      '11': 'Nov',
-      '12': 'Dec',
+'01':'Jan',
+'02':'Feb',
+'03':'Mar',
+'04':'Apr',
+'05':'May',
+'06':'Jun',
+'07':'Jul',
+'08':'Aug',
+'09':'Sep',
+'10':'Oct',
+'11':'Nov',
+'12':'Dec',
     };
     const m = monthAbbrs[mPart] || mPart;
-    return `${m} ${parseInt(dPart, 10)}`;
+    return`${m} ${parseInt(dPart, 10)}`;
   }
   const formattedPeakDate = formatActiveDate(stats.mostActiveDate);
 
@@ -1494,8 +1465,8 @@ export function generateWrappedSVG(
   const strokeDashoffset = circ - (clampedRatio / 100) * circ;
 
   const sf = 0.45;
-  const rawTowers = computeTowers(calendar, params.scale, '', 'commits');
-  let bgTowersMarkup = '';
+  const rawTowers = computeTowers(calendar, params.scale,'','commits');
+  let bgTowersMarkup ='';
   const resolvedSolidColor = accent;
   for (const t of rawTowers) {
     const scaleHeight = t.h * sf;
@@ -1509,7 +1480,7 @@ export function generateWrappedSVG(
 
     const paths = buildTowerPaths(scaleHeight, 0.45);
 
-    bgTowersMarkup += `
+    bgTowersMarkup +=`
         <g transform="translate(${scaleX}, ${scaleY})">
           <path d="${paths.left}" fill="${resolvedSolidColor}" fill-opacity="${leftFaceOpacity}" stroke="${resolvedSolidColor}" stroke-opacity="${strokeOpacity}" stroke-width="0.22" />
           <path d="${paths.right}" fill="${resolvedSolidColor}" fill-opacity="${rightFaceOpacity}" stroke="${resolvedSolidColor}" stroke-opacity="${strokeOpacity}" stroke-width="0.22" />
@@ -1518,11 +1489,11 @@ export function generateWrappedSVG(
   }
 
   const borderAttr = safeBorderWidth
-    ? `stroke="#${sanitizeHexColor(params.border, '58a6ff')}" stroke-width="${safeBorderWidth}"`
-    : `stroke="${accent}" stroke-opacity="0.15" stroke-width="${safeBorderWidth || 1.5}"`;
+    ?`stroke="#${sanitizeHexColor(params.border, '58a6ff')}" stroke-width="${safeBorderWidth}"`
+    :`stroke="${accent}" stroke-opacity="0.15" stroke-width="${safeBorderWidth || 1.5}"`;
 
   const autoThemeVariables = params.autoTheme
-    ? `
+    ?`
     :root { --sf-bg: #${AUTO_THEME_LIGHT.bg}; --sf-text: #${AUTO_THEME_LIGHT.text}; --sf-accent: #${AUTO_THEME_LIGHT.accent}; }
     @media (prefers-color-scheme: dark) { :root { --sf-bg: #${AUTO_THEME_DARK.bg}; --sf-text: #${AUTO_THEME_DARK.text}; --sf-accent: #${AUTO_THEME_DARK.accent}; } }
     .sf-bg-fill { fill: var(--sf-bg); }
@@ -1530,30 +1501,30 @@ export function generateWrappedSVG(
     .sf-accent-fill { fill: var(--sf-accent); }
     .sf-accent-stroke { stroke: var(--sf-accent); }
   `
-    : '';
+    :'';
 
   const rectFill = params.autoTheme
-    ? 'class="sf-bg-fill"'
-    : `fill="${params.hideBackground ? 'transparent' : bgFill}"`;
-  const textClass = params.autoTheme ? 'class="sf-text-fill"' : `fill="${text}"`;
-  const accentClass = params.autoTheme ? 'class="sf-accent-fill"' : `fill="${accent}"`;
+    ?'class="sf-bg-fill"'
+    :`fill="${params.hideBackground ? 'transparent' : bgFill}"`;
+  const textClass = params.autoTheme ?'class="sf-text-fill"' :`fill="${text}"`;
+  const accentClass = params.autoTheme ?'class="sf-accent-fill"' :`fill="${accent}"`;
 
   const borderStroke = params.autoTheme
-    ? `class="sf-accent-stroke" stroke-opacity="0.15" stroke-width="${safeBorderWidth || 1.5}"`
+    ?`class="sf-accent-stroke" stroke-opacity="0.15" stroke-width="${safeBorderWidth || 1.5}"`
     : borderAttr;
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
   const filterGlow =
     params.glow !== false
-      ? `<filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      ?`<filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="3.5" result="blur"/>
       <feComposite in="SourceGraphic" in2="blur" operator="over"/>
     </filter>`
-      : '';
+      :'';
 
-  const glowAttr = params.glow !== false ? ' filter="url(#glow)"' : '';
+  const glowAttr = params.glow !== false ?' filter="url(#glow)"' :'';
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -1668,15 +1639,15 @@ export function generateWrappedSVG(
 function generateAutoThemeMonthlySVG(stats: MonthlyStats, params: BadgeParams): string {
   const light = AUTO_THEME_LIGHT;
   const dark = AUTO_THEME_DARK;
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const safeUser = escapeXML(params.user ||'GitHub User');
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
 
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart = sanitizedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
   const radius = sanitizeRadius(params.radius, 8);
   const labels = getLabels(params.lang);
 
@@ -1684,14 +1655,14 @@ function generateAutoThemeMonthlySVG(stats: MonthlyStats, params: BadgeParams): 
   const height = sanitizeDimension(params.height, 120, 80, 800);
 
   const commitsLabel =
-    params.mode === 'loc' ? 'LINES THIS MONTH (EST.)' : labels.COMMITS_THIS_MONTH;
-  const deltaUnit = params.mode === 'loc' ? 'LINES (EST.)' : 'commits';
+    params.mode ==='loc' ?'LINES THIS MONTH (EST.)' : labels.COMMITS_THIS_MONTH;
+  const deltaUnit = params.mode ==='loc' ?'LINES (EST.)' :'commits';
 
   const deltaText = computeDeltaText(stats, deltaUnit, params.delta_format);
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -1742,21 +1713,21 @@ const HEATMAP_CELL_GAP = 3;
 const HEATMAP_CELL_RADIUS = 2;
 const HEATMAP_GRID_ORIGIN_X = 60;
 const HEATMAP_GRID_ORIGIN_Y = 55;
-const HEATMAP_WEEKDAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+const HEATMAP_WEEKDAY_LABELS = ['','Mon','','Wed','','Fri',''];
 const HEATMAP_OPACITIES = [0.06, 0.3, 0.55, 0.8, 1.0];
 const HEATMAP_MONTH_NAMES_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+'Jan',
+'Feb',
+'Mar',
+'Apr',
+'May',
+'Jun',
+'Jul',
+'Aug',
+'Sep',
+'Oct',
+'Nov',
+'Dec',
 ];
 
 function computeHeatmapIntensity(count: number, maxCount: number): number {
@@ -1775,7 +1746,7 @@ function renderHeatmapGrid(
   text: string,
   sf: number,
   todayDate: string,
-  mode: 'commits' | 'loc' = 'commits',
+  mode:'commits' |'loc' ='commits',
   isAutoTheme: boolean = false,
   glow: boolean = true
 ): string {
@@ -1791,21 +1762,21 @@ function renderHeatmapGrid(
   weeks.forEach((week) => {
     week.contributionDays.forEach((day) => {
       const count =
-        mode === 'loc' ? (day.locAdditions || 0) + (day.locDeletions || 0) : day.contributionCount;
+        mode ==='loc' ? (day.locAdditions || 0) + (day.locDeletions || 0) : day.contributionCount;
       if (count > maxCount) maxCount = count;
     });
   });
 
   const todayInWindow = weeks.some((w) => w.contributionDays.some((d) => d.date === todayDate));
 
-  let cells = '';
-  let monthHeaders = '';
-  let prevMonth = '';
+  let cells ='';
+  let monthHeaders ='';
+  let prevMonth ='';
 
   weeks.forEach((week, col) => {
     week.contributionDays.forEach((day, row) => {
       const count =
-        mode === 'loc' ? (day.locAdditions || 0) + (day.locDeletions || 0) : day.contributionCount;
+        mode ==='loc' ? (day.locAdditions || 0) + (day.locDeletions || 0) : day.contributionCount;
       const intensity = computeHeatmapIntensity(count, maxCount);
       const opacity = HEATMAP_OPACITIES[intensity];
       const x = originX + col * step;
@@ -1816,15 +1787,15 @@ function renderHeatmapGrid(
         (!todayInWindow && col === weeks.length - 1 && row === week.contributionDays.length - 1);
 
       const [yr, m, d] = day.date.split('-');
-      const formattedDate = `${MONTH_NAMES[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`;
-      const unit = mode === 'loc' ? 'est. lines of code' : 'commits';
-      const tooltipPrefix = isToday ? 'TODAY: ' : '';
-      const tooltip = `${tooltipPrefix}${formattedDate}: ${count} ${unit}`;
+      const formattedDate =`${MONTH_NAMES[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`;
+      const unit = mode ==='loc' ?'est. lines of code' :'commits';
+      const tooltipPrefix = isToday ?'TODAY: ' :'';
+      const tooltip =`${tooltipPrefix}${formattedDate}: ${count} ${unit}`;
 
-      const fillAttr = isAutoTheme ? 'fill="var(--sf-accent)"' : `fill="${accent}"`;
-      const filterAttr = intensity === 4 && glow !== false ? ' filter="url(#hm-glow)"' : '';
+      const fillAttr = isAutoTheme ?'fill="var(--sf-accent)"' :`fill="${accent}"`;
+      const filterAttr = intensity === 4 && glow !== false ?' filter="url(#hm-glow)"' :'';
 
-      cells += `
+      cells +=`
       <rect
         x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="${cellRadius}"
         ${fillAttr} fill-opacity="${opacity}"${filterAttr}
@@ -1842,25 +1813,25 @@ function renderHeatmapGrid(
       if (monthStr !== prevMonth) {
         const mx = originX + col * step;
         const my = originY - Math.round(8 * sf);
-        const labelFill = isAutoTheme ? 'var(--sf-text)' : text;
-        monthHeaders += `
+        const labelFill = isAutoTheme ?'var(--sf-text)' : text;
+        monthHeaders +=`
       <text x="${mx}" y="${my}" fill="${labelFill}" font-size="${Math.round(9 * sf)}px" font-family="'Roboto', sans-serif" opacity="0.6">${monthStr}</text>`;
         prevMonth = monthStr;
       }
     }
   });
 
-  let weekdayLabels = '';
+  let weekdayLabels ='';
   HEATMAP_WEEKDAY_LABELS.forEach((label, row) => {
     if (!label) return;
     const ly = originY + row * step + Math.round(cellSize * 0.75);
     const lx = originX - Math.round(8 * sf);
-    const labelFill = isAutoTheme ? 'var(--sf-text)' : text;
-    weekdayLabels += `
+    const labelFill = isAutoTheme ?'var(--sf-text)' : text;
+    weekdayLabels +=`
     <text x="${lx}" y="${ly}" text-anchor="end" fill="${labelFill}" font-size="${Math.round(9 * sf)}px" font-family="'Roboto', sans-serif" opacity="0.6">${label}</text>`;
   });
 
-  return `<g class="hm-grid">
+  return`<g class="hm-grid">
     ${monthHeaders}
     ${weekdayLabels}
     ${cells}
@@ -1879,21 +1850,21 @@ function renderHeatmapLegend(
   const gap = Math.round(3 * sf);
   const step = cellSize + gap;
   const fontSize = Math.round(9 * sf);
-  const labelFill = isAutoTheme ? 'var(--sf-text)' : text;
-  const fillAttr = isAutoTheme ? 'var(--sf-accent)' : accent;
+  const labelFill = isAutoTheme ?'var(--sf-text)' : text;
+  const fillAttr = isAutoTheme ?'var(--sf-accent)' : accent;
 
-  let legend = `<g transform="translate(${x}, ${y})">
+  let legend =`<g transform="translate(${x}, ${y})">
     <text x="0" y="${Math.round(cellSize * 0.75)}" fill="${labelFill}" font-size="${fontSize}px" font-family="'Roboto', sans-serif" opacity="0.5">Less</text>`;
 
   const lessTextWidth = Math.round(28 * sf);
   HEATMAP_OPACITIES.forEach((opacity, i) => {
     const cx = lessTextWidth + i * step;
-    legend += `
+    legend +=`
     <rect x="${cx}" y="0" width="${cellSize}" height="${cellSize}" rx="${Math.round(2 * sf)}" fill="${fillAttr}" fill-opacity="${opacity}" />`;
   });
 
   const moreX = lessTextWidth + HEATMAP_OPACITIES.length * step + Math.round(4 * sf);
-  legend += `
+  legend +=`
     <text x="${moreX}" y="${Math.round(cellSize * 0.75)}" fill="${labelFill}" font-size="${fontSize}px" font-family="'Roboto', sans-serif" opacity="0.5">More</text>
   </g>`;
 
@@ -1907,44 +1878,43 @@ export function generateHeatmapSVG(
 ): string {
   if (params.autoTheme) return generateAutoThemeHeatmapSVG(stats, params, calendar);
 
-  const safeUser = escapeXML(params.user || 'GitHub User');
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeUser = escapeXML(params.user ||'GitHub User');
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
-  const rawBorderWidth = String(params.border || '').trim();
-  let safeBorderWidth: string | number = 0; // Default fallback width
+  const rawBorderWidth = String(params.border ||'').trim();
+  let safeBorderWidth: string | number = 0;
 
   if (/^\d+$/.test(rawBorderWidth)) {
     safeBorderWidth = parseInt(rawBorderWidth, 10);
   } else if (/^#[0-9a-fA-F]{3,6}$/.test(rawBorderWidth)) {
-    // If it's a valid hex color code, treat it as valid and give it a default thickness of 2
     safeBorderWidth = 2;
-  } else if (['none', 'thin', 'medium', 'thick'].includes(rawBorderWidth.toLowerCase())) {
+  } else if (['none','thin','medium','thick'].includes(rawBorderWidth.toLowerCase())) {
     safeBorderWidth = rawBorderWidth.toLowerCase();
   }
 
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
   const bgFill =
-    params.bgType === 'linear' || params.bgType === 'radial' ? 'url(#canvas-gradient)' : bg;
+    params.bgType ==='linear' || params.bgType ==='radial' ?'url(#canvas-gradient)' : bg;
 
   const rawAccent = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = `#${sanitizeHexColor(rawAccent, '00ffaa')}`;
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const accent =`#${sanitizeHexColor(rawAccent, '00ffaa')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const borderAttr = safeBorderWidth
-    ? `stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
-    : '';
+    ?`stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
+    :'';
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const sf = getSizeScale(params.size);
   const radius = sanitizeRadius(params.radius, 8) * sf;
@@ -1969,17 +1939,17 @@ export function generateHeatmapSVG(
   );
   const legend = renderHeatmapLegend(accent, text, sf, s(60), s(270), false);
 
-  const unit = params.mode === 'loc' ? 'est. lines of code' : 'total contributions';
+  const unit = params.mode ==='loc' ?'est. lines of code' :'total contributions';
 
   const filterGlow =
     params.glow !== false
-      ? `<filter id="hm-glow" x="-50%" y="-50%" width="200%" height="200%">
+      ?`<filter id="hm-glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="${Math.round(3 * sf)}" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>`
-      : '';
+      :'';
 
-  return `
+  return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   <title id="sf-title-${safeId}">StreakForge Heatmap for ${safeUser}</title>
   <desc id="sf-desc-${safeId}">${safeUser} has ${stats.totalContributions} ${unit} and a longest streak of ${stats.longestStreak} days.</desc>
@@ -2070,16 +2040,16 @@ function generateAutoThemeHeatmapSVG(
 ): string {
   const light = AUTO_THEME_LIGHT;
   const dark = AUTO_THEME_DARK;
-  const safeUser = escapeXML(params.user || 'GitHub User');
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeUser = escapeXML(params.user ||'GitHub User');
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart = sanitizedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const sf = getSizeScale(params.size);
   const radius = sanitizeRadius(params.radius, 8) * sf;
@@ -2090,27 +2060,27 @@ function generateAutoThemeHeatmapSVG(
 
   const grid = renderHeatmapGrid(
     calendar,
-    '',
-    '',
+'',
+'',
     sf,
     stats.todayDate,
     params.mode,
     true,
     params.glow !== false
   );
-  const legend = renderHeatmapLegend('', '', sf, s(60), s(270), true);
+  const legend = renderHeatmapLegend('','', sf, s(60), s(270), true);
 
-  const unit = params.mode === 'loc' ? 'est. lines of code' : 'total contributions';
+  const unit = params.mode ==='loc' ?'est. lines of code' :'total contributions';
 
   const filterGlow =
     params.glow !== false
-      ? `<filter id="hm-glow" x="-50%" y="-50%" width="200%" height="200%">
+      ?`<filter id="hm-glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="${Math.round(3 * sf)}" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>`
-      : '';
+      :'';
 
-  return `
+  return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   <title id="sf-title-${safeId}">StreakForge Heatmap for ${safeUser}</title>
   <desc id="sf-desc-${safeId}">${safeUser} has ${stats.totalContributions} ${unit} and a longest streak of ${stats.longestStreak} days.</desc>
@@ -2255,11 +2225,11 @@ function renderGhostTowers(
   layout: { col: number; row: number; h: number }[],
   accent: string
 ): string {
-  let ghostTowers = '';
+  let ghostTowers ='';
   for (const { col, row, h } of layout) {
     const tx = 300 + (col - row) * 16;
     const ty = 120 + (col + row) * TILE_HEIGHT_HALF;
-    ghostTowers += `
+    ghostTowers +=`
       <g transform="translate(${tx}, ${ty - h})">
         <path d="M0 10 L0 ${10 + h} L-16 ${h} L-16 0 Z"
           fill="${accent}" fill-opacity="0.08"
@@ -2272,16 +2242,11 @@ function renderGhostTowers(
           stroke="${accent}" stroke-opacity="0.22" stroke-width="0.5"/>
       </g>`;
   }
-  return `<g class="ghost-towers">${ghostTowers}</g>`;
+  return`<g class="ghost-towers">${ghostTowers}</g>`;
 }
 
-/**
- * Renders the shared SVG definitions (filters and gradients)
- * used by both NotFound and RateLimit ghost SVGs.
- * * @param bg - The background color string to match the ghost fade gradient.
- */
 export function renderGhostDefs(bg: string): string {
-  return `
+  return`
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="5" result="blur"/>
       <feComposite in="SourceGraphic" in2="blur" operator="over"/>
@@ -2297,13 +2262,8 @@ export function renderGhostDefs(bg: string): string {
   `;
 }
 
-/**
- * Renders the shared SVG <style> block used by ghost city cards.
- * Centralises the CSS keyframes and utility classes for floating animations
- * ensuring visual consistency across all error card variants.
- */
 function renderGhostStyles(): string {
-  return `
+  return`
     @keyframes float {
       0% { transform: translateY(0px); }
       50% { transform: translateY(-10px); }
@@ -2321,20 +2281,20 @@ export function generateNotFoundSVG(
   accent: string,
   text: string,
   radius: number,
-  speed: string = '8s'
+  speed: string ='8s'
 ): string {
   const safeSpeed = sanitizeSpeed(speed);
-  const sanitizedUsername = username.replace(/[^a-zA-Z0-9\-]/g, '').slice(0, 39) || 'unknown';
+  const sanitizedUsername = username.replace(/[^a-zA-Z0-9\-]/g,'').slice(0, 39) ||'unknown';
   const safeName = escapeXML(sanitizedUsername.toUpperCase());
   const ghostTowersHtml = renderGhostTowers(GHOST_LAYOUT, accent);
 
-  const safeId = safeName.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeName.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
   const previousBackgroundRectBorderAttrs = currentBackgroundRectBorderAttrs;
-  currentBackgroundRectBorderAttrs = '';
+  currentBackgroundRectBorderAttrs ='';
 
   try {
-    return `<svg
+    return`<svg
   xmlns="http://www.w3.org/2000/svg"
   width="100%"
   viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}"
@@ -2434,24 +2394,24 @@ export function generateVersusSVG(
   if (params.autoTheme)
     return generateAutoThemeVersusSVG(stats1, stats2, params, calendar1, calendar2);
 
-  const safeUser1 = escapeXML(params.user || 'User 1');
-  const safeUser2 = escapeXML(params.versus || 'User 2');
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const safeUser1 = escapeXML(params.user ||'User 1');
+  const safeUser2 = escapeXML(params.versus ||'User 2');
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
   const rawAccent = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = `#${sanitizeHexColor(rawAccent, '00ffaa')}`;
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const accent =`#${sanitizeHexColor(rawAccent, '00ffaa')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const sf = getSizeScale(params.size);
   const radius = sanitizeRadius(params.radius, 8) * sf;
@@ -2474,14 +2434,14 @@ export function generateVersusSVG(
   const towers2 = renderTowers(towerData2, params, accent, text, sf, false, params.opacity ?? 1.0);
 
   const s = createScaler(sf);
-  const unit = params.mode === 'loc' ? 'est. lines of code' : 'total contributions';
+  const unit = params.mode ==='loc' ?'est. lines of code' :'total contributions';
 
-  const safeId = `${safeUser1}_vs_${safeUser2}`.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId =`${safeUser1}_vs_${safeUser2}`.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
   const isWinner1 = stats1.totalContributions > stats2.totalContributions;
   const isWinner2 = stats2.totalContributions > stats1.totalContributions;
 
-  return `
+  return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   <title id="sf-title-${safeId}">StreakForge Versus Stats: ${safeUser1} vs ${safeUser2}</title>
   <desc id="sf-desc-${safeId}">${safeUser1} has ${stats1.totalContributions} ${unit}. ${safeUser2} has ${stats2.totalContributions} ${unit}.</desc>
@@ -2519,15 +2479,15 @@ function generateAutoThemeVersusSVG(
 ): string {
   const light = AUTO_THEME_LIGHT;
   const dark = AUTO_THEME_DARK;
-  const lightLabelFill = getLuminance(light.bg) > 0.5 ? 'var(--sf-text)' : 'var(--sf-accent)';
-  const lightLabelOpacity = getLuminance(light.bg) > 0.5 ? '0.8' : '0.7';
-  const darkLabelFill = getLuminance(dark.bg) > 0.5 ? 'var(--sf-text)' : 'var(--sf-accent)';
-  const darkLabelOpacity = getLuminance(dark.bg) > 0.5 ? '0.8' : '0.7';
-  const safeUser1 = escapeXML(params.user || 'User 1');
-  const safeUser2 = escapeXML(params.versus || 'User 2');
+  const lightLabelFill = getLuminance(light.bg) > 0.5 ?'var(--sf-text)' :'var(--sf-accent)';
+  const lightLabelOpacity = getLuminance(light.bg) > 0.5 ?'0.8' :'0.7';
+  const darkLabelFill = getLuminance(dark.bg) > 0.5 ?'var(--sf-text)' :'var(--sf-accent)';
+  const darkLabelOpacity = getLuminance(dark.bg) > 0.5 ?'0.8' :'0.7';
+  const safeUser1 = escapeXML(params.user ||'User 1');
+  const safeUser2 = escapeXML(params.versus ||'User 2');
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const sf = getSizeScale(params.size);
   const radius = sanitizeRadius(params.radius, 8) * sf;
   const labels = getLabels(params.lang);
@@ -2545,19 +2505,19 @@ function generateAutoThemeVersusSVG(
     sf
   );
 
-  const towers1 = renderTowers(towerData1, params, '', '', sf, true, params.opacity ?? 1.0);
-  const towers2 = renderTowers(towerData2, params, '', '', sf, true, params.opacity ?? 1.0);
+  const towers1 = renderTowers(towerData1, params,'','', sf, true, params.opacity ?? 1.0);
+  const towers2 = renderTowers(towerData2, params,'','', sf, true, params.opacity ?? 1.0);
 
   const s = createScaler(sf);
   const fs = (n: number): number => Math.round(n * sf * 10) / 10;
-  const unit = params.mode === 'loc' ? 'est. lines of code' : 'total contributions';
+  const unit = params.mode ==='loc' ?'est. lines of code' :'total contributions';
 
-  const safeId = `${safeUser1}_vs_${safeUser2}`.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId =`${safeUser1}_vs_${safeUser2}`.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
   const isWinner1 = stats1.totalContributions > stats2.totalContributions;
   const isWinner2 = stats2.totalContributions > stats1.totalContributions;
 
-  return `
+  return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   <title id="sf-title-${safeId}">StreakForge Versus Stats: ${safeUser1} vs ${safeUser2}</title>
   <desc id="sf-desc-${safeId}">${safeUser1} has ${stats1.totalContributions} ${unit}. ${safeUser2} has ${stats2.totalContributions} ${unit}.</desc>
@@ -2626,28 +2586,28 @@ export function generatePulseSVG(
     return generateAutoThemePulseSVG(stats, params, calendar);
   }
 
-  const safeUser = escapeXML(params.user || 'GitHub User');
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const safeUser = escapeXML(params.user ||'GitHub User');
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
 
   const rawAccent = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = `#${sanitizeHexColor(rawAccent, '00ffaa')}`;
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const accent =`#${sanitizeHexColor(rawAccent, '00ffaa')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
 
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const parsedRadius = Number(params.radius);
   const radius = Math.max(0, Math.min(Number.isNaN(parsedRadius) ? 8 : parsedRadius, 50));
 
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
   const width = sanitizeDimension(params.width, 800, 100, 1200);
   const height = sanitizeDimension(params.height, 170, 80, 800);
 
@@ -2655,7 +2615,7 @@ export function generatePulseSVG(
   calendar.weeks.forEach((week) => {
     week.contributionDays.forEach((day) => {
       days.push(
-        params.mode === 'loc'
+        params.mode ==='loc'
           ? (day.locAdditions || 0) + (day.locDeletions || 0)
           : day.contributionCount
       );
@@ -2677,14 +2637,14 @@ export function generatePulseSVG(
 
   const stepX = graphWidth / Math.max(pulseDays.length - 1, 1);
 
-  let pathD = '';
+  let pathD ='';
   pulseDays.forEach((count, i) => {
     const x = paddingX + i * stepX;
     const normalized = (count - minCount) / range;
     const y = paddingYTop + graphHeight - normalized * graphHeight;
 
     if (i === 0) {
-      pathD += `M ${x} ${y}`;
+      pathD +=`M ${x} ${y}`;
     } else {
       const prevCount = pulseDays[i - 1];
       const prevNormalized = (prevCount - minCount) / range;
@@ -2696,22 +2656,22 @@ export function generatePulseSVG(
       const cp2X = x - stepX / 2;
       const cp2Y = y;
 
-      pathD += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${x} ${y}`;
+      pathD +=` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${x} ${y}`;
     }
   });
 
   const bottomY = paddingYTop + graphHeight;
   const lastX = paddingX + (pulseDays.length - 1) * stepX;
   const firstX = paddingX;
-  const areaPathD = `${pathD} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+  const areaPathD =`${pathD} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
 
   const lastCount = pulseDays[pulseDays.length - 1] ?? 0;
   const lastNormalized = (lastCount - minCount) / range;
   const lastY = paddingYTop + graphHeight - lastNormalized * graphHeight;
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -2817,28 +2777,28 @@ function generateAutoThemePulseSVG(
 ): string {
   const light = AUTO_THEME_LIGHT;
   const dark = AUTO_THEME_DARK;
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const safeUser = escapeXML(params.user ||'GitHub User');
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
 
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const parsedRadius = Number(params.radius);
   const radius = Math.max(0, Math.min(Number.isNaN(parsedRadius) ? 8 : parsedRadius, 50));
 
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
   const width = sanitizeDimension(params.width, 800, 100, 1200);
   const height = sanitizeDimension(params.height, 170, 80, 800);
   const days: number[] = [];
   calendar.weeks.forEach((week) => {
     week.contributionDays.forEach((day) => {
       days.push(
-        params.mode === 'loc'
+        params.mode ==='loc'
           ? (day.locAdditions || 0) + (day.locDeletions || 0)
           : day.contributionCount
       );
@@ -2860,14 +2820,14 @@ function generateAutoThemePulseSVG(
 
   const stepX = graphWidth / Math.max(pulseDays.length - 1, 1);
 
-  let pathD = '';
+  let pathD ='';
   pulseDays.forEach((count, i) => {
     const x = paddingX + i * stepX;
     const normalized = (count - minCount) / range;
     const y = paddingYTop + graphHeight - normalized * graphHeight;
 
     if (i === 0) {
-      pathD += `M ${x} ${y}`;
+      pathD +=`M ${x} ${y}`;
     } else {
       const prevCount = pulseDays[i - 1];
       const prevNormalized = (prevCount - minCount) / range;
@@ -2879,22 +2839,22 @@ function generateAutoThemePulseSVG(
       const cp2X = x - stepX / 2;
       const cp2Y = y;
 
-      pathD += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${x} ${y}`;
+      pathD +=` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${x} ${y}`;
     }
   });
 
   const bottomY = paddingYTop + graphHeight;
   const lastX = paddingX + (pulseDays.length - 1) * stepX;
   const firstX = paddingX;
-  const areaPathD = `${pathD} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+  const areaPathD =`${pathD} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
 
   const lastCount = pulseDays[pulseDays.length - 1] ?? 0;
   const lastNormalized = (lastCount - minCount) / range;
   const lastY = paddingYTop + graphHeight - lastNormalized * graphHeight;
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -3023,16 +2983,16 @@ function renderSkylineSVG(
   calendar: ContributionCalendar,
   isAutoTheme: boolean
 ): string {
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const safeUser = escapeXML(params.user ||'GitHub User');
   const light = AUTO_THEME_LIGHT;
   const dark = AUTO_THEME_DARK;
 
-  const bg = isAutoTheme ? '' : `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const bg = isAutoTheme ?'' :`#${sanitizeHexColor(params.bg, '0d1117')}`;
   const rawAccent = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = isAutoTheme ? '' : `#${sanitizeHexColor(rawAccent, '00ffaa')}`;
-  const text = isAutoTheme ? '' : `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const accent = isAutoTheme ?'' :`#${sanitizeHexColor(rawAccent, '00ffaa')}`;
+  const text = isAutoTheme ?'' :`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const sanitizedFont = sanitizeFont(params.font);
   const predefinedFont = sanitizedFont
@@ -3042,15 +3002,15 @@ function renderSkylineSVG(
   const selectedFont = isPredefinedFont
     ? predefinedFont
     : sanitizedFont
-      ? `"${sanitizedFont}", sans-serif`
+      ?`"${sanitizedFont}", sans-serif`
       : null;
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
 
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const parsedRadius = Number(params.radius);
   const radius = Math.max(0, Math.min(Number.isNaN(parsedRadius) ? 8 : parsedRadius, 50));
@@ -3064,7 +3024,7 @@ function renderSkylineSVG(
     let count = 0;
     week.contributionDays.forEach((day) => {
       count +=
-        params.mode === 'loc'
+        params.mode ==='loc'
           ? (day.locAdditions || 0) + (day.locDeletions || 0)
           : day.contributionCount;
     });
@@ -3085,20 +3045,20 @@ function renderSkylineSVG(
   const stepX = graphWidth / Math.max(numWeeks - 1, 1);
   const buildingWidth = Math.max(2, Math.floor(stepX - 3));
 
-  let buildingsSVG = '';
+  let buildingsSVG ='';
   const animate = params.animate ?? true;
 
   const accentList = Array.isArray(params.accent)
-    ? params.accent.map((c) => `#${sanitizeHexColor(c, '00ffaa')}`)
+    ? params.accent.map((c) =>`#${sanitizeHexColor(c, '00ffaa')}`)
     : [accent];
 
-  const scaleParam: 'linear' | 'log' | 'sqrt' =
-    params.scale === 'log' || params.scale === 'sqrt' ? params.scale : 'linear';
+  const scaleParam:'linear' |'log' |'sqrt' =
+    params.scale ==='log' || params.scale ==='sqrt' ? params.scale :'linear';
 
   const maxPossibleHeight =
-    scaleParam === 'log'
+    scaleParam ==='log'
       ? MAX_LOG_HEIGHT
-      : scaleParam === 'sqrt'
+      : scaleParam ==='sqrt'
         ? MAX_SQRT_HEIGHT
         : MAX_LINEAR_HEIGHT;
 
@@ -3123,10 +3083,10 @@ function renderSkylineSVG(
     const y = bottomY - h;
     const delay = (i * 0.015).toFixed(3);
 
-    let buildingColor = '';
+    let buildingColor ='';
     let opacity = 0.8;
     if (isAutoTheme) {
-      buildingColor = 'var(--sf-accent)';
+      buildingColor ='var(--sf-accent)';
       opacity = count === 0 ? 0.15 : 0.7;
     } else {
       if (count === 0) {
@@ -3147,7 +3107,7 @@ function renderSkylineSVG(
       }
     }
 
-    let windowsSVG = '';
+    let windowsSVG ='';
     const canHaveWindows = count > 0 && h >= 22 && buildingWidth >= 5;
     if (canHaveWindows) {
       const windowW = 2;
@@ -3171,16 +3131,16 @@ function renderSkylineSVG(
       for (let r = 0; r < numRows; r++) {
         const windowY = y + topPadding + r * stepYOffset;
         for (let c = 0; c < numCols; c++) {
-          const winSeed = `${i}:${r}:${c}`;
+          const winSeed =`${i}:${r}:${c}`;
           const isLit = deterministicRandom(winSeed) < 0.35;
           if (isLit) {
-            const winFill = isAutoTheme ? 'var(--sf-text)' : '#ffffff';
+            const winFill = isAutoTheme ?'var(--sf-text)' :'#ffffff';
             if (animate) {
-              windowsSVG += `
+              windowsSVG +=`
                 <rect class="sf-window sf-window-animated" style="animation-delay: ${windowDelay}s;" x="${startX[c].toFixed(1)}" y="${windowY.toFixed(1)}" width="${windowW}" height="${windowH}" fill="${winFill}" opacity="0" pointer-events="none" />
               `;
             } else {
-              windowsSVG += `
+              windowsSVG +=`
                 <rect class="sf-window" x="${startX[c].toFixed(1)}" y="${windowY.toFixed(1)}" width="${windowW}" height="${windowH}" fill="${winFill}" opacity="0.85" pointer-events="none" />
               `;
             }
@@ -3189,21 +3149,21 @@ function renderSkylineSVG(
       }
     }
 
-    const dateStr = weeks[i]?.contributionDays[0]?.date || '';
-    const unit = params.mode === 'loc' ? 'lines' : 'commits';
-    const tooltipText = `${dateStr} week: ${count} ${unit}`;
+    const dateStr = weeks[i]?.contributionDays[0]?.date ||'';
+    const unit = params.mode ==='loc' ?'lines' :'commits';
+    const tooltipText =`${dateStr} week: ${count} ${unit}`;
 
-    let rectSVG = '';
-    const rectClass = `sf-building${animate ? ' sf-building-animated' : ''}`;
-    const rectStyle = animate ? ` style="animation-delay: ${delay}s;"` : '';
+    let rectSVG ='';
+    const rectClass =`sf-building${animate ? ' sf-building-animated' : ''}`;
+    const rectStyle = animate ?` style="animation-delay: ${delay}s;"` :'';
 
     if (isAutoTheme) {
-      rectSVG = `<rect class="${rectClass}"${rectStyle} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${buildingWidth}" height="${h.toFixed(1)}" fill="var(--sf-accent)" fill-opacity="${opacity}" rx="1" />`;
+      rectSVG =`<rect class="${rectClass}"${rectStyle} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${buildingWidth}" height="${h.toFixed(1)}" fill="var(--sf-accent)" fill-opacity="${opacity}" rx="1" />`;
     } else {
-      rectSVG = `<rect class="${rectClass}"${rectStyle} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${buildingWidth}" height="${h.toFixed(1)}" fill="${buildingColor}" fill-opacity="${opacity}" rx="1" />`;
+      rectSVG =`<rect class="${rectClass}"${rectStyle} x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${buildingWidth}" height="${h.toFixed(1)}" fill="${buildingColor}" fill-opacity="${opacity}" rx="1" />`;
     }
 
-    buildingsSVG += `
+    buildingsSVG +=`
       <g>
         <title>${escapeXML(tooltipText)}</title>
         ${rectSVG}
@@ -3212,37 +3172,37 @@ function renderSkylineSVG(
     `;
   });
 
-  let starsSVG = '';
+  let starsSVG ='';
   const numStars = 25;
   for (let sIdx = 0; sIdx < numStars; sIdx++) {
-    const seedX = `star:${sIdx}:x`;
-    const seedY = `star:${sIdx}:y`;
-    const seedR = `star:${sIdx}:r`;
+    const seedX =`star:${sIdx}:x`;
+    const seedY =`star:${sIdx}:y`;
+    const seedR =`star:${sIdx}:r`;
     const starX = paddingX + deterministicRandom(seedX) * graphWidth;
     const starY = paddingYTop - 30 + deterministicRandom(seedY) * (graphHeight * 0.75);
     const starR = 0.5 + deterministicRandom(seedR) * 0.8;
-    const seedO = `star:${sIdx}:o`;
+    const seedO =`star:${sIdx}:o`;
     const starOpacity = 0.2 + deterministicRandom(seedO) * 0.6;
-    const starFill = isAutoTheme ? 'var(--sf-text)' : '#ffffff';
+    const starFill = isAutoTheme ?'var(--sf-text)' :'#ffffff';
 
-    let starAnim = '';
+    let starAnim ='';
     if (animate) {
       const delay = (deterministicRandom(seedX) * 3).toFixed(2);
       const dur = (2 + deterministicRandom(seedY) * 3).toFixed(2);
-      starAnim = `style="animation: twinkle ${dur}s ease-in-out infinite; animation-delay: ${delay}s;"`;
+      starAnim =`style="animation: twinkle ${dur}s ease-in-out infinite; animation-delay: ${delay}s;"`;
     }
 
-    starsSVG += `<circle class="sf-star" cx="${starX.toFixed(1)}" cy="${starY.toFixed(1)}" r="${starR.toFixed(1)}" fill="${starFill}" opacity="${starOpacity.toFixed(2)}" ${starAnim} pointer-events="none" />`;
+    starsSVG +=`<circle class="sf-star" cx="${starX.toFixed(1)}" cy="${starY.toFixed(1)}" r="${starR.toFixed(1)}" fill="${starFill}" opacity="${starOpacity.toFixed(2)}" ${starAnim} pointer-events="none" />`;
   }
 
-  const styleBg = isAutoTheme ? 'var(--sf-bg)' : bg;
+  const styleBg = isAutoTheme ?'var(--sf-bg)' : bg;
 
   const labels = getLabels(params.lang);
-  const modeLabel = params.mode === 'loc' ? 'TOTAL LINES OF CODE' : labels.ANNUAL_SYNC_TOTAL;
+  const modeLabel = params.mode ==='loc' ?'TOTAL LINES OF CODE' : labels.ANNUAL_SYNC_TOTAL;
 
-  let defs = '';
+  let defs ='';
   if (isAutoTheme) {
-    defs = `
+    defs =`
       <defs>
         <linearGradient id="skyGradient" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="var(--sf-bg)" stop-opacity="0" />
@@ -3258,7 +3218,7 @@ function renderSkylineSVG(
       </defs>
     `;
   } else {
-    defs = `
+    defs =`
       <defs>
         <linearGradient id="skyGradient" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${bg}" stop-opacity="0" />
@@ -3275,14 +3235,14 @@ function renderSkylineSVG(
     `;
   }
 
-  const strokeStroke = isAutoTheme ? 'var(--sf-accent)' : accent;
-  const groundLine = `
+  const strokeStroke = isAutoTheme ?'var(--sf-accent)' : accent;
+  const groundLine =`
     <line x1="${paddingX}" y1="${bottomY}" x2="${width - paddingX}" y2="${bottomY}" stroke="${strokeStroke}" stroke-width="1.5" stroke-opacity="0.6" filter="url(#horizonGlow)" />
   `;
 
-  const upperUser = escapeXML((params.user || 'GitHub User').toUpperCase());
+  const upperUser = escapeXML((params.user ||'GitHub User').toUpperCase());
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -3392,25 +3352,25 @@ export function generateRateLimitSVG(
   accent: string,
   text: string,
   radius: number,
-  speed: string = '8s',
+  speed: string ='8s',
   isCircuitOpen = false
 ): string {
   const safeSpeed = sanitizeSpeed(speed);
   const ghostTowersHtml = renderGhostTowers(GHOST_LAYOUT, accent);
 
-  const safeId = 'rate_limit';
-  const subtitle = isCircuitOpen ? 'CIRCUIT BREAKER' : 'RATE LIMITED';
+  const safeId ='rate_limit';
+  const subtitle = isCircuitOpen ?'CIRCUIT BREAKER' :'RATE LIMITED';
   const subtitleWidth = isCircuitOpen ? 220 : 180;
   const subtitleRectX = 300 - subtitleWidth / 2;
   const note = isCircuitOpen
-    ? 'Circuit breaker active. System is temporarily offline.'
-    : 'Please wait a moment before trying again';
+    ?'Circuit breaker active. System is temporarily offline.'
+    :'Please wait a moment before trying again';
 
   const previousBackgroundRectBorderAttrs = currentBackgroundRectBorderAttrs;
-  currentBackgroundRectBorderAttrs = '';
+  currentBackgroundRectBorderAttrs ='';
 
   try {
-    return `<svg
+    return`<svg
   xmlns="http://www.w3.org/2000/svg"
   width="100%"
   viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}"
@@ -3499,50 +3459,49 @@ export function generateLanguagesSVG(
   params: BadgeParams,
   repoContributions: RepoContribution[]
 ): string {
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const safeUser = escapeXML(params.user ||'GitHub User');
 
-  const rawBorderWidth = String(params.border || '').trim();
-  let safeBorderWidth: string | number = 0; // Default fallback width
+  const rawBorderWidth = String(params.border ||'').trim();
+  let safeBorderWidth: string | number = 0;
 
   if (/^\d+$/.test(rawBorderWidth)) {
     safeBorderWidth = parseInt(rawBorderWidth, 10);
   } else if (/^#[0-9a-fA-F]{3,6}$/.test(rawBorderWidth)) {
-    // If it's a valid hex color code, treat it as valid and give it a default thickness of 2
     safeBorderWidth = 2;
-  } else if (['none', 'thin', 'medium', 'thick'].includes(rawBorderWidth.toLowerCase())) {
+  } else if (['none','thin','medium','thick'].includes(rawBorderWidth.toLowerCase())) {
     safeBorderWidth = rawBorderWidth.toLowerCase();
   }
 
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
 
   const accentRaw = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accentStr = accentRaw || '00ffaa';
-  const accent = `#${sanitizeHexColor(accentStr, '00ffaa')}`;
+  const accentStr = accentRaw ||'00ffaa';
+  const accent =`#${sanitizeHexColor(accentStr, '00ffaa')}`;
 
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const borderAttr = safeBorderWidth
-    ? `stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
-    : '';
+    ?`stroke="#${sanitizeHexColor(params.border, '000000')}" stroke-width="${safeBorderWidth}"`
+    :'';
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const sf = getSizeScale(params.size);
   const radius = sanitizeRadius(params.radius, 8) * sf;
   const labels = getLabels(params.lang);
   const W = Math.round(SVG_WIDTH * sf);
   const H = Math.round(SVG_HEIGHT * sf);
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
 
   const langCounts: Record<string, number> = {};
   repoContributions.forEach((c) => {
@@ -3553,7 +3512,7 @@ export function generateLanguagesSVG(
   const total = Object.values(langCounts).reduce((a, b) => a + b, 0);
 
   if (total === 0) {
-    return `
+    return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   ${renderHeader(safeUser, stats, sf, params, safeId)}
   ${renderStyle(selectedFont, statsFont, googleFontsImport, text, accent, sf, bg, params.entrance || 'rise')}
@@ -3567,7 +3526,7 @@ export function generateLanguagesSVG(
     .map(([name, count]) => ({
       name,
       percentage: Math.round((count / total) * 100),
-      color: (LANGUAGE_COLORS as Record<string, string>)[name] ?? '#8B949E',
+      color: (LANGUAGE_COLORS as Record<string, string>)[name] ??'#8B949E',
     }))
     .sort((a, b) => b.percentage - a.percentage)
     .slice(0, 5);
@@ -3581,7 +3540,7 @@ export function generateLanguagesSVG(
     { x: 160, y: -90, zIndex: 1 },
   ];
 
-  let towersHtml = '';
+  let towersHtml ='';
   const maxPercent = languages[0]?.percentage || 100;
 
   const sortedLanguages = languages
@@ -3599,11 +3558,11 @@ export function generateLanguagesSVG(
     const towerScale = TOWER_SCALE * sf;
     const paths = buildTowerPaths(h, towerScale);
 
-    const hexColor = lang.color.startsWith('#') ? lang.color : `#${lang.color}`;
+    const hexColor = lang.color.startsWith('#') ? lang.color :`#${lang.color}`;
     const delay = (idx * 0.15).toFixed(3);
-    const tooltip = `${escapeXML(lang.name)}: ${lang.percentage}%`;
+    const tooltip =`${escapeXML(lang.name)}: ${lang.percentage}%`;
 
-    towersHtml += `
+    towersHtml +=`
         <g transform="translate(${scaledX}, ${scaledY})">
           <g class="sf-tower interactive-tower" style="animation-delay: ${delay}s;">
             <title>${tooltip}</title>
@@ -3617,7 +3576,7 @@ export function generateLanguagesSVG(
         </g>`;
   });
 
-  return `
+  return`
 <svg style="max-width: 100%; height: auto;" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" role="img" focusable="false" aria-labelledby="sf-title-${safeId}" aria-describedby="sf-desc-${safeId}">
   ${renderHeader(safeUser, stats, sf, params, safeId)}
   ${renderStyle(selectedFont, statsFont, googleFontsImport, text, accent, sf, bg, params.entrance || 'rise')}
@@ -3631,8 +3590,6 @@ export function generateLanguagesSVG(
 </svg>`;
 }
 
-// ─── Activity Graph View ───────────────────────────────────────────────────
-
 export function generateActivityGraphSVG(
   stats: StreakStats,
   params: BadgeParams,
@@ -3640,26 +3597,26 @@ export function generateActivityGraphSVG(
 ): string {
   if (params.autoTheme) return generateAutoThemeActivityGraphSVG(stats, params, calendar);
 
-  const safeUser = escapeXML(params.user || 'GitHub User');
-  const bg = `#${sanitizeHexColor(params.bg, '0d1117')}`;
+  const safeUser = escapeXML(params.user ||'GitHub User');
+  const bg =`#${sanitizeHexColor(params.bg, '0d1117')}`;
   const bgFill =
-    params.bgType === 'linear' || params.bgType === 'radial' ? 'url(#canvas-gradient)' : bg;
+    params.bgType ==='linear' || params.bgType ==='radial' ?'url(#canvas-gradient)' : bg;
 
   const rawAccent = Array.isArray(params.accent)
     ? params.accent[params.accent.length - 1]
     : params.accent;
-  const accent = `#${sanitizeHexColor(rawAccent, '00ffaa')}`;
-  const text = `#${sanitizeHexColor(params.text, 'ffffff')}`;
+  const accent =`#${sanitizeHexColor(rawAccent, '00ffaa')}`;
+  const text =`#${sanitizeHexColor(params.text, 'ffffff')}`;
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const parsedRadius = Number(params.radius);
   const radius = Math.max(0, Math.min(Number.isNaN(parsedRadius) ? 8 : parsedRadius, 50));
@@ -3670,10 +3627,10 @@ export function generateActivityGraphSVG(
   const { pathD, areaPathD, trendPathD, peakX, peakY, peakCount, peakDate, days, totalCount } =
     _buildActivityGraphData(calendar, params, width, height);
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
-  const unit = params.mode === 'loc' ? 'LINES (EST.)' : 'COMMITS';
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
+  const unit = params.mode ==='loc' ?'LINES (EST.)' :'COMMITS';
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -3710,17 +3667,17 @@ function generateAutoThemeActivityGraphSVG(
 ): string {
   const light = AUTO_THEME_LIGHT;
   const dark = AUTO_THEME_DARK;
-  const safeUser = escapeXML(params.user || 'GitHub User');
+  const safeUser = escapeXML(params.user ||'GitHub User');
 
   const sanitizedFont = sanitizeFont(params.font);
   const selectedFont = resolveFont(sanitizedFont);
   const isPredefinedFont = isBundledFont(sanitizedFont);
-  const statsFont = selectedFont || '"Space Grotesk", sans-serif';
+  const statsFont = selectedFont ||'"Space Grotesk", sans-serif';
   const googleFontUrlPart =
     sanitizedFont && !isPredefinedFont ? sanitizeGoogleFontUrl(sanitizedFont) : null;
   const googleFontsImport = googleFontUrlPart
-    ? `@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
-    : '';
+    ?`@import url('https://fonts.googleapis.com/css2?family=${googleFontUrlPart}&amp;display=swap');`
+    :'';
 
   const parsedRadius = Number(params.radius);
   const radius = Math.max(0, Math.min(Number.isNaN(parsedRadius) ? 8 : parsedRadius, 50));
@@ -3731,10 +3688,10 @@ function generateAutoThemeActivityGraphSVG(
   const { pathD, areaPathD, trendPathD, peakX, peakY, peakCount, peakDate, days, totalCount } =
     _buildActivityGraphData(calendar, params, width, height);
 
-  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase();
-  const unit = params.mode === 'loc' ? 'LINES (EST.)' : 'COMMITS';
+  const safeId = safeUser.replace(/[^a-zA-Z0-9-]/g,'_').toLowerCase();
+  const unit = params.mode ==='loc' ?'LINES (EST.)' :'COMMITS';
 
-  return `
+  return`
 <svg
   xmlns="http://www.w3.org/2000/svg"
   width="${width}"
@@ -3794,10 +3751,8 @@ function _buildActivityGraphData(
   width: number,
   height: number
 ): ActivityGraphData {
-  // Flatten all days from the calendar (already filtered to from/to by API)
   const allDays = calendar.weeks.flatMap((w) => w.contributionDays);
 
-  // Deduplicate by date, preserving order
   const seen = new Set<string>();
   const uniqueDays = allDays.filter((d) => {
     if (!d || seen.has(d.date)) return false;
@@ -3806,7 +3761,7 @@ function _buildActivityGraphData(
   });
 
   const counts = uniqueDays.map((d) =>
-    params.mode === 'loc' ? (d.locAdditions || 0) + (d.locDeletions || 0) : d.contributionCount
+    params.mode ==='loc' ? (d.locAdditions || 0) + (d.locDeletions || 0) : d.contributionCount
   );
 
   const totalCount = counts.reduce((s, c) => s + c, 0);
@@ -3825,32 +3780,29 @@ function _buildActivityGraphData(
 
   const stepX = n > 1 ? graphWidth / (n - 1) : graphWidth;
 
-  // Point coordinates
   const pts = counts.map((c, i) => {
     const x = paddingX + i * stepX;
     const normalized = (c - minCount) / range;
     const y = paddingYTop + graphHeight - normalized * graphHeight;
-    return { x, y, c, date: uniqueDays[i]?.date ?? '' };
+    return { x, y, c, date: uniqueDays[i]?.date ??'' };
   });
 
-  // Smooth cubic bezier area chart path
-  let pathD = '';
+  let pathD ='';
   pts.forEach((pt, i) => {
     if (i === 0) {
-      pathD += `M ${pt.x} ${pt.y}`;
+      pathD +=`M ${pt.x} ${pt.y}`;
     } else {
       const prev = pts[i - 1];
       const cp1x = prev.x + stepX / 2;
       const cp2x = pt.x - stepX / 2;
-      pathD += ` C ${cp1x} ${prev.y}, ${cp2x} ${pt.y}, ${pt.x} ${pt.y}`;
+      pathD +=` C ${cp1x} ${prev.y}, ${cp2x} ${pt.y}, ${pt.x} ${pt.y}`;
     }
   });
 
   const lastPt = pts[pts.length - 1] ?? { x: paddingX, y: bottomY };
   const firstPt = pts[0] ?? { x: paddingX, y: bottomY };
-  const areaPathD = n > 0 ? `${pathD} L ${lastPt.x} ${bottomY} L ${firstPt.x} ${bottomY} Z` : '';
+  const areaPathD = n > 0 ?`${pathD} L ${lastPt.x} ${bottomY} L ${firstPt.x} ${bottomY} Z` :'';
 
-  // Linear trend line (least-squares regression)
   let sumX = 0,
     sumY = 0,
     sumXY = 0,
@@ -3865,14 +3817,13 @@ function _buildActivityGraphData(
   const intercept = n > 0 ? (sumY - slope * sumX) / n : paddingYTop + graphHeight / 2;
   const trendY1 = slope * firstPt.x + intercept;
   const trendY2 = slope * lastPt.x + intercept;
-  const trendPathD = n > 1 ? `M ${firstPt.x} ${trendY1} L ${lastPt.x} ${trendY2}` : '';
+  const trendPathD = n > 1 ?`M ${firstPt.x} ${trendY1} L ${lastPt.x} ${trendY2}` :'';
 
-  // Peak point
   let peakIdx = 0;
   counts.forEach((c, i) => {
     if (c > counts[peakIdx]) peakIdx = i;
   });
-  const peakPt = pts[peakIdx] ?? { x: paddingX, y: paddingYTop, date: '' };
+  const peakPt = pts[peakIdx] ?? { x: paddingX, y: paddingYTop, date:'' };
 
   return {
     pathD,
@@ -3889,40 +3840,40 @@ function _buildActivityGraphData(
 
 function _renderActivityGraphDefs(accent: string, bg: string, params: BadgeParams): string {
   const bgFill =
-    params.bgType === 'linear' || params.bgType === 'radial' ? 'url(#canvas-gradient)' : bg;
+    params.bgType ==='linear' || params.bgType ==='radial' ?'url(#canvas-gradient)' : bg;
 
-  let canvasGradient = '';
-  if (params.bgType === 'linear' || params.bgType === 'radial') {
+  let canvasGradient ='';
+  if (params.bgType ==='linear' || params.bgType ==='radial') {
     const bgStart = params.bgStart
       ? params.bgStart.startsWith('#')
         ? params.bgStart
-        : `#${params.bgStart}`
-      : '#0d1117';
+        :`#${params.bgStart}`
+      :'#0d1117';
     const bgEnd = params.bgEnd
       ? params.bgEnd.startsWith('#')
         ? params.bgEnd
-        : `#${params.bgEnd}`
-      : '#000000';
-    if (params.bgType === 'linear') {
+        :`#${params.bgEnd}`
+      :'#000000';
+    if (params.bgType ==='linear') {
       const angle = params.bgAngle ?? 90;
       const angleRad = (angle - 90) * (Math.PI / 180);
-      const x1 = Math.round(50 + Math.cos(angleRad + Math.PI) * 50) + '%';
-      const y1 = Math.round(50 + Math.sin(angleRad + Math.PI) * 50) + '%';
-      const x2 = Math.round(50 + Math.cos(angleRad) * 50) + '%';
-      const y2 = Math.round(50 + Math.sin(angleRad) * 50) + '%';
-      canvasGradient = `<linearGradient id="canvas-gradient" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
+      const x1 = Math.round(50 + Math.cos(angleRad + Math.PI) * 50) +'%';
+      const y1 = Math.round(50 + Math.sin(angleRad + Math.PI) * 50) +'%';
+      const x2 = Math.round(50 + Math.cos(angleRad) * 50) +'%';
+      const y2 = Math.round(50 + Math.sin(angleRad) * 50) +'%';
+      canvasGradient =`<linearGradient id="canvas-gradient" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
         <stop offset="0%" stop-color="${bgStart}" />
         <stop offset="100%" stop-color="${bgEnd}" />
       </linearGradient>`;
     } else {
-      canvasGradient = `<radialGradient id="canvas-gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      canvasGradient =`<radialGradient id="canvas-gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
         <stop offset="0%" stop-color="${bgStart}" />
         <stop offset="100%" stop-color="${bgEnd}" />
       </radialGradient>`;
     }
   }
 
-  return `<defs>
+  return`<defs>
     <linearGradient id="ag-area-grad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${accent}" stop-opacity="0.35" />
       <stop offset="100%" stop-color="${accent}" stop-opacity="0.0" />
@@ -3942,8 +3893,8 @@ function _activityGraphCSS(
   accent: string,
   isAutoTheme: boolean
 ): string {
-  const areaFill = isAutoTheme ? 'url(#ag-area-grad)' : 'url(#ag-area-grad)';
-  return `
+  const areaFill = isAutoTheme ?'url(#ag-area-grad)' :'url(#ag-area-grad)';
+  return`
   .ag-title { font-family: ${selectedFont || '"Syncopate", sans-serif'}; fill: ${text}; font-size: 13px; letter-spacing: 3px; font-weight: 700; opacity: 0.85; }
   .ag-total { font-family: ${statsFont}; fill: ${accent}; font-size: 15px; font-weight: 600; }
   .ag-area {
@@ -3991,39 +3942,37 @@ function _renderPeakAnnotation(
   statsFont: string,
   isAutoTheme: boolean
 ): string {
-  if (peakCount === 0) return '';
+  if (peakCount === 0) return'';
 
-  // Format date label: "MMM D"
-  let dateLabel = '';
+  let dateLabel ='';
   if (peakDate) {
     const parts = peakDate.split('-');
     const monthAbbrs = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+'Jan',
+'Feb',
+'Mar',
+'Apr',
+'May',
+'Jun',
+'Jul',
+'Aug',
+'Sep',
+'Oct',
+'Nov',
+'Dec',
     ];
-    const m = parts[1] ? monthAbbrs[parseInt(parts[1], 10) - 1] : '';
-    const d = parts[2] ? parseInt(parts[2], 10) : '';
-    dateLabel = m && d ? ` ${m} ${d}` : '';
+    const m = parts[1] ? monthAbbrs[parseInt(parts[1], 10) - 1] :'';
+    const d = parts[2] ? parseInt(parts[2], 10) :'';
+    dateLabel = m && d ?` ${m} ${d}` :'';
   }
 
-  // Flip label above or below to avoid clipping at top
   const labelY = peakY < 50 ? peakY + 22 : peakY - 14;
-  const textAnchor = peakX > 600 ? 'end' : peakX < 200 ? 'start' : 'middle';
-  const dotFill = isAutoTheme ? 'var(--sf-accent)' : accent;
-  const labelFill = isAutoTheme ? 'var(--sf-accent)' : accent;
-  const dateFill = isAutoTheme ? 'var(--sf-text)' : text;
+  const textAnchor = peakX > 600 ?'end' : peakX < 200 ?'start' :'middle';
+  const dotFill = isAutoTheme ?'var(--sf-accent)' : accent;
+  const labelFill = isAutoTheme ?'var(--sf-accent)' : accent;
+  const dateFill = isAutoTheme ?'var(--sf-text)' : text;
 
-  return `
+  return`
   <g class="ag-peak">
     <circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="5" fill="${dotFill}" opacity="0.25" />
     <circle class="ag-peak-dot" cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="4" fill="${dotFill}" />
@@ -4042,9 +3991,9 @@ export interface ErrorSVGOptions {
 }
 
 export function buildInlineErrorSVG(text: string, options?: ErrorSVGOptions): string {
-  const bg = options?.bg || '#0d1117';
-  const accent = options?.accent || '#00ffaa';
-  const textCol = options?.text || '#c9d1d9';
+  const bg = options?.bg ||'#0d1117';
+  const accent = options?.accent ||'#00ffaa';
+  const textCol = options?.text ||'#c9d1d9';
   const radius = options?.radius ?? 8;
   const width = options?.width ?? 400;
   const height = options?.height ?? 150;
@@ -4052,7 +4001,7 @@ export function buildInlineErrorSVG(text: string, options?: ErrorSVGOptions): st
   const MAX_LINE = 48;
   const chars = Array.from(text);
   const truncated =
-    chars.length > MAX_LINE * 2 ? chars.slice(0, MAX_LINE * 2 - 1).join('') + '…' : text;
+    chars.length > MAX_LINE * 2 ? chars.slice(0, MAX_LINE * 2 - 1).join('') +'…' : text;
   const truncatedChars = Array.from(truncated);
   const line1 = escapeXML(truncatedChars.slice(0, MAX_LINE).join(''));
   const line2 =
@@ -4060,7 +4009,7 @@ export function buildInlineErrorSVG(text: string, options?: ErrorSVGOptions): st
   const textY = line2 ? String(Math.round(height * 0.42)) : String(Math.round(height * 0.5));
   const line2Y = String(Math.round(height * 0.61));
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  return`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <rect width="${width}" height="${height}" fill="${bg}" rx="${radius}" stroke="${accent}" stroke-opacity="0.25" stroke-width="1"/>
   <text x="${Math.round(width / 2)}" y="${textY}" text-anchor="middle" dominant-baseline="central" fill="${textCol}" font-family="sans-serif" font-size="13">${line1}</text>${
     line2

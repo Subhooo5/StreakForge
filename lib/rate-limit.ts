@@ -8,29 +8,6 @@ interface RateLimitResult {
   reset: number;
 }
 
-// ---------------------------------------------------------------------------
-// Lua script executed atomically on Redis via EVAL.
-//
-// Why Lua and not a plain INCR+EXPIRE pipeline?
-// A pipeline sends both commands in one network round-trip but Redis still
-// executes them one-by-one. Between the INCR and EXPIRE another request can
-// land, read the counter, or even let the key expire mid-flight — the classic
-// TOCTOU (Time-Of-Check To Time-Of-Use) race.
-//
-// Redis guarantees that a Lua script runs as a single atomic operation: no
-// other command can interleave while the script is executing.
-//
-// Script contract
-//   KEYS[1]  – the rate-limit key (e.g. "ratelimit_class:<ip>")
-//   ARGV[1]  – limit   (number of requests allowed per window)
-//   ARGV[2]  – window  (seconds)
-//
-// Returns: {allowed, newCount, ttlSeconds}
-//   allowed  – 1 if the request is within the limit, 0 if it is blocked
-//   newCount – counter value after this request
-//   ttl      – remaining seconds until the window resets (-1 means no expiry
-//              was set yet, which should not happen in normal flow)
-// ---------------------------------------------------------------------------
 const RATE_LIMIT_SCRIPT = `
 local key    = KEYS[1]
 local limit  = tonumber(ARGV[1])
@@ -52,10 +29,6 @@ local ttl = redis.call('TTL', key)
 return {1, newCount, ttl}
 `;
 
-// ---------------------------------------------------------------------------
-// Helper: call Upstash Redis REST API with a single EVAL command.
-// Returns the parsed [allowed, count, ttl] tuple, or null on failure.
-// ---------------------------------------------------------------------------
 async function evalRateLimitScript(
   url: string,
   token: string,
@@ -74,7 +47,7 @@ async function evalRateLimitScript(
         [
           'EVAL',
           RATE_LIMIT_SCRIPT,
-          '1', // number of KEYS
+          '1',
           key,
           limit.toString(),
           windowSeconds.toString(),
@@ -94,10 +67,6 @@ async function evalRateLimitScript(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helper: fetch the current counter for an IP from Redis (read-only GET).
-// Returns the count, or null on failure.
-// ---------------------------------------------------------------------------
 async function getCountFromRedis(url: string, token: string, key: string): Promise<number | null> {
   try {
     const res = await fetch(`${url}/pipeline`, {
@@ -119,19 +88,6 @@ async function getCountFromRedis(url: string, token: string, key: string): Promi
   }
 }
 
-/**
- * Rate limiter to prevent basic DoS/spam (Denial of Wallet).
- *
- * When Upstash Redis / Vercel KV is configured (KV_REST_API_URL + KV_REST_API_TOKEN
- * environment variables), rate limit state is persisted across restarts and shared
- * across all serverless instances via atomic INCR + EXPIRE operations.
- *
- * Falls back to an in-memory TTL cache when KV is not configured. In this mode,
- * state resets on cold start / server restart, but it is highly effective at
- * stopping aggressive single-instance spikes during normal operation.
- *
- * @see https://upstash.com/docs/rate-limiting/quickstart for KV setup instructions.
- */
 export class RateLimiter {
   private cache: DistributedCache<number>;
   private limit: number;
@@ -139,32 +95,12 @@ export class RateLimiter {
   private allowlist = new Set<string>();
   private blocklist = new Set<string>();
 
-  /**
-   * Creates a new RateLimiter instance.
-   *
-   * @param limit - Maximum number of requests allowed per window. Defaults to 5.
-   * @param windowMs - Time window in milliseconds. Defaults to 60000 (1 minute).
-   */
   constructor(limit = 5, windowMs = 60000, maxSize = 10000) {
     this.limit = limit;
     this.windowMs = windowMs;
     this.cache = new DistributedCache<number>(maxSize, windowMs);
   }
 
-  /**
-   * Checks whether a request from the given IP is allowed.
-   *
-   * Increments the request count for the IP and resets the TTL on each call,
-   * behaving similarly to a sliding window timeout.
-   *
-   * @param ip - The IP address to check.
-   * @returns `true` if the request is allowed, `false` if rate limited.
-   *
-   * @example
-   * if (!rateLimiter.check(ip)) {
-   *   return new Response("Too Many Requests", { status: 429 });
-   * }
-   */
   async check(ip: string): Promise<boolean> {
     const result = await this.checkWithResult(ip);
     return result.success;
@@ -185,15 +121,6 @@ export class RateLimiter {
     const url = process.env.KV_REST_API_URL;
     const token = process.env.KV_REST_API_TOKEN;
 
-    // ------------------------------------------------------------------
-    // Redis path — atomic Lua EVAL (replaces the old INCR+EXPIRE pipeline)
-    //
-    // The old pipeline was vulnerable to a TOCTOU race: two concurrent
-    // requests could both read the pre-increment counter, both pass the
-    // limit check, and both be allowed even though only one should be.
-    // The Lua script collapses check+increment+expire into one atomic unit
-    // so no other command can interleave.
-    // ------------------------------------------------------------------
     if (url && token) {
       const windowSeconds = Math.floor(this.windowMs / 1000);
       const result = await evalRateLimitScript(
@@ -238,14 +165,6 @@ export class RateLimiter {
     };
   }
 
-  /**
-   * Resets the request count for a given IP address.
-   *
-   * Useful for clearing rate limit state after a successful
-   * authentication or admin action.
-   *
-   * @param ip - The IP address to reset.
-   */
   async reset(ip: string): Promise<void> {
     const url = process.env.KV_REST_API_URL;
     const token = process.env.KV_REST_API_TOKEN;
@@ -268,25 +187,6 @@ export class RateLimiter {
     await this.cache.delete(`ratelimit:${ip}`);
   }
 
-  /**
-   * Returns the number of remaining requests allowed for a given IP
-   * in the current window.
-   *
-   * Does not consume a request — use `check()` for that.
-   *
-   * Previously this method only read from the in-memory cache, which meant
-   * it always returned a stale/wrong value when Redis was active (because
-   * `checkWithResult` was writing to Redis, not to the local cache).
-   * It now queries Redis first and falls back to memory.
-   *
-   * @param ip - The IP address to check.
-   * @returns Promise resolving to the number of remaining requests,
-   *          or the full limit if the IP has no recorded requests.
-   *
-   * @example
-   * const left = await rateLimiter.remaining("192.168.1.1");
-   * console.log(`You have ${left} requests left.`);
-   */
   async remaining(ip: string): Promise<number> {
     const url = process.env.KV_REST_API_URL;
     const token = process.env.KV_REST_API_TOKEN;
@@ -323,38 +223,13 @@ export class RateLimiter {
   }
 }
 
-// Global instance for track-user endpoint (5 requests per IP per minute)
 export const trackUserRateLimiter = new RateLimiter(5, 60000);
 
-// Global instance for notify endpoint (5 requests per IP per minute)
 export const notifyRateLimiter = new RateLimiter(5, 60000);
 
-/**
- * Distributed rate limiter for Next.js Edge Middleware.
- *
- * When Upstash Redis / Vercel KV is configured, counters are shared across
- * all serverless instances via an atomic Lua script (EVAL).
- * Falls back to a local in-memory cache for development environments.
- */
 const trackers = new DistributedCache<{ count: number; resetAt: number }>(2000, 60000);
 
-/**
- * Checks if a request from a given IP should be rate limited.
- *
- * @param ip - The IP address to track.
- * @param limit - Maximum number of requests allowed in the window. Defaults to 60.
- * @param windowMs - Time window in milliseconds. Defaults to 60000 (1 minute).
- * @param namespace - Isolation namespace for the cache key. Different namespaces
- *   use independent counters, preventing cross-route interference.
- *   Defaults to `'default'`.
- * @returns A {@link RateLimitResult} containing success status, limit, remaining count, and reset time.
- *
- * @example
- * const result = rateLimit(ip, 60, 60000, 'api');
- * if (!result.success) {
- *   return new Response("Too Many Requests", { status: 429 });
- * }
- */
+// Rate limit check
 export async function rateLimit(
   ip: string,
   limit: number = 60,
@@ -370,10 +245,6 @@ export async function rateLimit(
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
 
-  // ------------------------------------------------------------------
-  // Redis path — atomic Lua EVAL (replaces the old INCR+EXPIRE pipeline)
-  // See comment in RateLimiter.checkWithResult for full explanation.
-  // ------------------------------------------------------------------
   if (url && token) {
     const windowSeconds = Math.floor(windowMs / 1000);
     const result = await evalRateLimitScript(url, token, cacheKey, limit, windowSeconds);
@@ -403,12 +274,6 @@ export async function rateLimit(
   };
 }
 
-/**
- * Builds the standard rate-limit response headers from a {@link RateLimitResult}.
- *
- * `Retry-After` is expressed in seconds per RFC 9110 §10.2.3.
- * `result.reset` is an epoch-ms value so we convert before setting the header.
- */
 export function getRateLimitHeaders(result: RateLimitResult) {
   const retryAfter = Math.max(0, Math.ceil((result.reset - Date.now()) / 1000));
 

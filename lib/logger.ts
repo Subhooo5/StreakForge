@@ -2,7 +2,6 @@ type Context = Record<string, unknown>;
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Global request ID context (set by middleware)
 let currentRequestId: string | null = null;
 
 export function setRequestId(requestId: string): void {
@@ -17,21 +16,15 @@ export function clearRequestId(): void {
   currentRequestId = null;
 }
 
-// Define sensitive keys that should be masked
 const SENSITIVE_KEYS = ['token', 'key', 'secret', 'password', 'authorization', 'cookie', 'email'];
 
-/**
- * Recursively scans and redacts sensitive information from an object.
- */
 function redact(obj: Context): Context {
   const result: Context = {};
 
   for (const [key, value] of Object.entries(obj)) {
-    // Check if the current key contains any of our sensitive keywords
     if (SENSITIVE_KEYS.some((k) => key.toLowerCase().includes(k))) {
       result[key] = '[REDACTED]';
     } else if (typeof value === 'object' && value !== null) {
-      // Recursively redact nested objects
       result[key] = redact(value as Record<string, unknown>);
     } else {
       result[key] = value;
@@ -42,10 +35,10 @@ function redact(obj: Context): Context {
 }
 
 const COLORS = {
-  debug: '\x1b[36m', // Cyan
-  info: '\x1b[32m', // Green
-  warn: '\x1b[33m', // Yellow
-  error: '\x1b[31m', // Red
+  debug: '\x1b[36m',
+  info: '\x1b[32m',
+  warn: '\x1b[33m',
+  error: '\x1b[31m',
   reset: '\x1b[0m',
 };
 
@@ -54,7 +47,6 @@ function createTimestamp(): string {
 }
 
 function logProduction(level: 'warn' | 'error', msg: string, ctx: Context = {}): void {
-  // Redact sensitive fields before structure serialization
   const redactedCtx = redact(ctx);
 
   const payload = {
@@ -75,10 +67,8 @@ function logDevelopment(
 ): void {
   const color = COLORS[level];
 
-  // Also redact in development to prevent accidental terminal exposure
   const redactedCtx = redact(ctx);
 
-  // Add request ID to context if available
   if (currentRequestId) {
     redactedCtx.requestId = currentRequestId;
   }

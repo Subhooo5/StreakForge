@@ -1,23 +1,22 @@
-import { GitHubRepo } from '@/lib/github';
-import { LANGUAGE_COLORS } from './languageColors';
-import { escapeXML } from './sanitizer';
-import { BadgeParams } from '@/types';
+import { GitHubRepo } from'@/lib/github';
+import { LANGUAGE_COLORS } from'./languageColors';
+import { escapeXML } from'./sanitizer';
+import { BadgeParams } from'@/types';
 
 function buildSparkline(data: number[], width: number, height: number, color: string): string {
-  if (!data || data.length === 0) return '';
+  if (!data || data.length === 0) return'';
   const max = Math.max(...data, 1);
   const step = width / (data.length - 1 || 1);
 
   const points = data.map((val, i) => {
     const x = i * step;
     const y = height - (val / max) * height;
-    return `${x},${y}`;
+    return`${x},${y}`;
   });
 
-  // Adding a fill area below the line for a glow/gradient effect
-  const fillPoints = `0,${height} ${points.join(' ')} ${width},${height}`;
+  const fillPoints =`0,${height} ${points.join(' ')} ${width},${height}`;
 
-  return `
+  return`
     <defs>
       <linearGradient id="sparkline-grad" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
@@ -42,45 +41,43 @@ export function generateRepoSpotlightSVG(repo: GitHubRepo, params: BadgeParams):
   const padding = 20;
 
   const repoName = escapeXML(repo.name);
-  const description = escapeXML(repo.description || '');
-  const lang = escapeXML(repo.language || 'Unknown');
+  const description = escapeXML(repo.description ||'');
+  const lang = escapeXML(repo.language ||'Unknown');
   const langColor =
-    repo.language && LANGUAGE_COLORS[repo.language] ? LANGUAGE_COLORS[repo.language] : '#858585';
+    repo.language && LANGUAGE_COLORS[repo.language] ? LANGUAGE_COLORS[repo.language] :'#858585';
 
   const stars =
     repo.stargazers_count > 999
-      ? (repo.stargazers_count / 1000).toFixed(1) + 'k'
+      ? (repo.stargazers_count / 1000).toFixed(1) +'k'
       : repo.stargazers_count;
   const forks =
     repo.forks_count && repo.forks_count > 999
-      ? (repo.forks_count / 1000).toFixed(1) + 'k'
+      ? (repo.forks_count / 1000).toFixed(1) +'k'
       : repo.forks_count || 0;
 
-  // Parse dates if available
   const dateStr = repo.pushed_at
     ? new Date(repo.pushed_at).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
+        year:'numeric',
+        month:'short',
+        day:'numeric',
       })
-    : '';
-  const updateText = dateStr ? `Updated ${dateStr}` : '';
+    :'';
+  const updateText = dateStr ?`Updated ${dateStr}` :'';
 
-  // Calculate wrapped description lines
   const descLines: string[] = [];
   const words = description.split(' ');
-  let currentLine = '';
+  let currentLine ='';
   for (const word of words) {
-    if ((currentLine + ' ' + word).length > 55) {
+    if ((currentLine +' ' + word).length > 55) {
       if (descLines.length === 2) {
-        descLines[1] += '...';
-        currentLine = '';
+        descLines[1] +='...';
+        currentLine ='';
         break;
       }
       descLines.push(currentLine.trim());
       currentLine = word;
     } else {
-      currentLine += (currentLine ? ' ' : '') + word;
+      currentLine += (currentLine ?' ' :'') + word;
     }
   }
   if (currentLine && descLines.length < 2) {
@@ -96,7 +93,7 @@ export function generateRepoSpotlightSVG(repo: GitHubRepo, params: BadgeParams):
     accent
   );
 
-  return `
+  return`
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
       <title id="title">Repository Spotlight: ${repoName}</title>
       <rect width="${width}" height="${height}" rx="${radius}" fill="#${bg}" stroke="#${accent}" stroke-width="1" stroke-opacity="0.3"/>

@@ -3,65 +3,26 @@ import { randomUUID } from 'crypto';
 import { brotliCompressSync, brotliDecompressSync } from 'zlib';
 import logger from '@/lib/logger';
 
-/**
- * Configuration options for the distributed mutex lock used by {@link DistributedCache.getOrSet}.
- */
 export interface LockConfig {
-  /**
-   * TTL for the Redis lock key (milliseconds). The lock auto-releases after this duration.
-   * Must be long enough to cover the expected execution time of `loadFn`.
-   * @default 10000
-   */
   lockTtlMs?: number;
 
-  /**
-   * Maximum time to spend polling for the lock (milliseconds).
-   * After this duration, `getOrSet` falls back to executing `loadFn` directly.
-   * @default 8000
-   */
   maxPollTimeMs?: number;
 
-  /**
-   * When `true`, a background heartbeat extends the lock TTL while `loadFn` is executing,
-   * preventing premature lock expiry for long-running operations.
-   * @default true
-   */
   enableLockExtension?: boolean;
 
-  /**
-   * Number of times to retry a failed lock release before giving up.
-   * @default 2
-   */
   releaseRetries?: number;
 }
 
-/**
- * Represents a cached item with its expiration timestamp.
- */
 type CacheItem<T> = {
   value: T;
   expiresAt: number;
 };
 
-/**
- * A Simple in-memory TTL(Time To Live) cache.
- *
- * Stores values in-process only and automatically removes expired entries.
- * This cache is not shared accross multiple server instances or severless invocations.
- *
- * @typeParam T - Type of values stored in the cache.
- */
 export class TTLCache<T> {
   private store = new Map<string, CacheItem<T | Buffer>>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   private readonly maxSize?: number;
 
-  /**
-   * Creates a new TTL cache instance.
-   *
-   * @param maxSize - Maximum number of items allowed in the cache.
-   * @param cleanupIntervalMs - Interval in milliseconds for cleaning expired entries.
-   */
   constructor(maxSize?: number, cleanupIntervalMs: number = 60000) {
     this.maxSize = maxSize === undefined ? undefined : Math.max(1, maxSize);
     const interval = Math.max(1000, cleanupIntervalMs);
@@ -125,17 +86,8 @@ export class TTLCache<T> {
     return stored;
   }
 
-  /**
-   * Retrieves a value from the cache.
-   *
-   * Returns 'null' if the key does not exist or if the entry has expired.
-   *
-   * @param key - Cache key.
-   * @returns The cached value or 'null'.
-   *
-   * @example
-   * const user = cache.get("user:1");
-   */
+  // Cache read
+
   get(key: string): T | null {
     if (typeof key !== 'string') {
       throw new TypeError('Cache key must be a string');
@@ -154,20 +106,6 @@ export class TTLCache<T> {
 
     return this.decompress(hit.value);
   }
-
-  /**
-   * Checks whether a key exists in the cache and has not expired.
-   *
-   * Unlike `get()`, this does not return the value.
-   *
-   * @param key - Cache key.
-   * @returns `true` if the key exists and is still valid, `false` otherwise.
-   *
-   * @example
-   * if (cache.has("user:1")) {
-   *   // safe to call get()
-   * }
-   */
 
   has(key: string): boolean {
     if (typeof key !== 'string') {
@@ -188,35 +126,13 @@ export class TTLCache<T> {
     return true;
   }
 
-  /**
-   * Removes a single entry from the cache.
-   *
-   * Does nothing if the key does not exist.
-   *
-   * @param key - Cache key to remove.
-   * @returns `true` if the key existed and was deleted, `false` otherwise.
-   *
-   * @example
-   * cache.delete("user:1");
-   */
   delete(key: string): boolean {
-    // Treat an invalid/empty key the same way get()/has() do: there's
-    // nothing to delete, so return false rather than throwing. An empty
-    // key could never have been successfully set() in the first place
-    // (set() rejects it), so this can never silently "miss" a real entry.
     if (typeof key !== 'string' || key.trim().length === 0) {
       return false;
     }
 
     return this.store.delete(key);
   }
-  /**
-   * Updates the value of an existing, non-expired cache entry without resetting its TTL.
-   *
-   * @param key - Cache key.
-   * @param value - New value to store.
-   * @returns `true` if the entry existed and was updated, `false` if missing or expired.
-   */
   update(key: string, value: T): boolean {
     const hit = this.store.get(key);
 
@@ -233,20 +149,8 @@ export class TTLCache<T> {
     return true;
   }
 
-  /**
-   * Stores a value in the cache with a TTL.
-   *
-   * If the cache reaches its maximum capacity, the oldest item
-   * may be removed to make room for new entries.
-   *
-   * @param key - Cache key.
-   * @param value - Value to cache.
-   * @param ttlMs - Time to live in milliseconds.
-   * @returns void
-   *
-   * @example
-   * cache.set("user:1", userData, 5000);
-   */
+  // Cache write
+
   set(key: string, value: T, ttlMs: number): void {
     if (typeof key !== 'string' || key.trim().length === 0) {
       throw new TypeError('Cache key cannot be empty');
@@ -278,14 +182,6 @@ export class TTLCache<T> {
     this.store.set(key, { value: this.compress(value), expiresAt: Date.now() + ttlMs });
   }
 
-  /**
-   * Removes all entries from the cache.
-   *
-   * @returns void
-   *
-   * @example
-   * cache.clear();
-   */
   clear(): void {
     this.store.clear();
   }
@@ -304,12 +200,6 @@ export class TTLCache<T> {
   }
 }
 
-/**
- * A hybrid distributed cache client that uses Upstash Redis / Vercel KV REST API if configured,
- * and falls back to the in-memory TTLCache otherwise.
- *
- * This enables shared caching across serverless instances and Edge regions.
- */
 export class DistributedCache<T> {
   private localCache: TTLCache<T>;
   private useRedis: boolean;
@@ -323,19 +213,20 @@ export class DistributedCache<T> {
     const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
     if (url && token) {
       this.useRedis = true;
-      this.redisUrl = url.replace(/\/$/, ''); // Remove trailing slash
+      this.redisUrl = url.replace(/\/$/, '');
       this.redisToken = token;
     } else {
       this.useRedis = false;
     }
   }
 
+  // Cache read: local, then shared
+
   async get(key: string, localTtlMs: number = 5 * 60 * 1000): Promise<T | null> {
     if (!this.useRedis) {
       return this.localCache.get(key);
     }
 
-    // Check local L1 cache first for fast in-instance lookups
     const localHit = this.localCache.get(key);
     if (localHit !== null) {
       return localHit;
@@ -361,7 +252,6 @@ export class DistributedCache<T> {
       }
 
       const parsed = JSON.parse(data.result) as T;
-      // Backfill local cache so subsequent requests in this instance are instant
       this.localCache.set(key, parsed, localTtlMs);
       return parsed;
     } catch (err) {
@@ -374,8 +264,9 @@ export class DistributedCache<T> {
     }
   }
 
+  // Cache write: local + shared
+
   async set(key: string, value: T, ttlMs: number): Promise<void> {
-    // Always update local cache
     this.localCache.set(key, value, ttlMs);
 
     if (!this.useRedis) {
@@ -477,7 +368,6 @@ export class DistributedCache<T> {
       if (updated) {
         this.localCache.update(key, value);
       } else {
-        // Redis no longer has the key, so the L1 value is stale.
         this.localCache.delete(key);
       }
 
@@ -496,16 +386,6 @@ export class DistributedCache<T> {
     this.localCache.clear();
   }
 
-  /**
-   * Atomically increments a numeric counter stored under `key` and returns the new value.
-   *
-   * When Redis is available, uses EVAL + Lua script for true atomicity.
-   * Falls back to the local TTLCache for non-Redis deployments (dev/test).
-   *
-   * @param key - Cache key holding a numeric counter.
-   * @param ttlMs - Time-to-live in milliseconds. Only applied when the key is first created (count == 1).
-   * @returns The incremented counter value.
-   */
   async incr(key: string, ttlMs: number): Promise<number> {
     if (!this.useRedis) {
       if (process.env.NODE_ENV === 'production') {
@@ -568,22 +448,6 @@ return c`;
     this.localCache.destroy();
   }
 
-  /**
-   * Returns cached data when available, otherwise loads and stores fresh data.
-   *
-   * Uses a two-layer coordination strategy to reduce cache stampedes:
-   * 1. Local Promise deduplication (L1) prevents duplicate fetches within the same instance.
-   * 2. Redis mutex locking (L2) prevents duplicate fetches across distributed instances.
-   *
-   * `loadFn` receives the current cached value (or null) so callers can implement
-   * stale refresh logic when needed.
-   *
-   * @param key - Cache key.
-   * @param loadFn - Async function used to load fresh data.
-   * @param ttlMs - Cache expiration time in milliseconds.
-   * @param shouldFetch - Optional predicate that forces refresh even on cache hits.
-   * @param lockConfig - Optional distributed lock tuning.
-   */
   async getOrSet(
     key: string,
     loadFn: (cached: T | null) => Promise<T>,
@@ -717,7 +581,6 @@ return c`;
                   ]),
                 });
               } catch {
-                // Ignore extension failures
               }
             }, extensionInterval);
             if (typeof extensionTimer === 'object' && typeof extensionTimer.unref === 'function') {

@@ -3,14 +3,6 @@ import { cookies } from 'next/headers';
 import { getToken } from 'next-auth/jwt';
 import { decryptToken } from '@/lib/crypto';
 
-/**
- * Returns the authenticated user's GitHub OAuth token (decrypted), or
- * undefined when there is no session. Pass the result as FetchOptions.token.
- * When undefined, lib/github.ts falls back to the global PAT pool.
- *
- * Token material is read from the encrypted JWT cookie server-side only —
- * it is never exposed through the client session API.
- */
 export async function getUserGitHubToken(): Promise<string | undefined> {
   const cookieStore = await cookies();
   const jwt = await getToken({
@@ -27,6 +19,6 @@ export async function getUserGitHubToken(): Promise<string | undefined> {
   try {
     return await decryptToken(jwt.ghToken);
   } catch {
-    return undefined; // corrupt/expired -> use global fallback
+    return undefined;
   }
 }

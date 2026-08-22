@@ -1,6 +1,5 @@
 import 'server-only';
 
-// lib/calculate.ts
 import type {
   ContributionCalendar,
   ContributionDay,
@@ -9,37 +8,18 @@ import type {
   MonthlyStats,
 } from '../types';
 
-/* ==========================================================================
- * UTILITY FUNCTIONS
- * ========================================================================== */
-
-/**
- * Determines whether a given year is a leap year.
- * Returns true for years divisible by 4 (except centuries not divisible by 400).
- */
 export function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
-/**
- * Returns the number of days in a given year (365 or 366).
- */
 export function daysInYear(year: number): number {
   return isLeapYear(year) ? 366 : 365;
 }
 
-/**
- * Safely calculates and rounds a percentage fraction to prevent NaN or
- * Infinity division values when the total denominator resolves to zero.
- */
 export function calculateSafePercentage(part: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((part / total) * 100);
 }
-
-/* ==========================================================================
- * STREAK & CALENDAR CALCULATIONS
- * ========================================================================== */
 
 export function convertLocalToUtc(
   year: number,
@@ -78,7 +58,6 @@ export function convertLocalToUtc(
     const targetUtcTime = Date.UTC(year, month - 1, day, hour, minute, second) - offsetMs;
     return new Date(targetUtcTime).toISOString().replace('.000Z', 'Z');
   } catch {
-    // Fallback to UTC if timezone is invalid or Intl throws
     return new Date(Date.UTC(year, month - 1, day, hour, minute, second))
       .toISOString()
       .replace('.000Z', 'Z');
@@ -86,12 +65,10 @@ export function convertLocalToUtc(
 }
 
 export function getLocalTodayStr(now: Date, timezone: string): string {
-  // Candidate dates are around the UTC date of now
   const utcYear = now.getUTCFullYear();
-  const utcMonth = now.getUTCMonth(); // 0-indexed
+  const utcMonth = now.getUTCMonth();
   const utcDate = now.getUTCDate();
 
-  // We check candidates from 1 day before to 1 day after the UTC date
   for (let offset = -1; offset <= 1; offset++) {
     const candidateDate = new Date(Date.UTC(utcYear, utcMonth, utcDate + offset));
     const y = candidateDate.getUTCFullYear();
@@ -100,7 +77,6 @@ export function getLocalTodayStr(now: Date, timezone: string): string {
 
     const dateStr = `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
 
-    // Get the UTC time for local midnight (00:00:00) and next midnight (24:00:00 / 00:00:00 of next day)
     const midnightUtcStr = convertLocalToUtc(y, m, d, 0, 0, 0, timezone);
     const nextMidnightUtcStr = convertLocalToUtc(y, m, d + 1, 0, 0, 0, timezone);
 
@@ -108,13 +84,11 @@ export function getLocalTodayStr(now: Date, timezone: string): string {
     const nextMidnightTime = new Date(nextMidnightUtcStr).getTime();
 
     const nowTime = now.getTime();
-    // Inclusive start, exclusive end: [midnight, next_midnight)
     if (nowTime >= midnightTime && nowTime < nextMidnightTime) {
       return dateStr;
     }
   }
 
-  // Fallback to standard Intl.DateTimeFormat if logic doesn't match
   try {
     return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(now);
   } catch {
@@ -188,7 +162,6 @@ export function calculateStreak(
   let longestStreak = 0;
   let tempStreak = 0;
 
-  // 1. Calculate Longest Streak (Standard loop)
   for (const day of uniqueDays) {
     if (day && day.contributionCount > 0) {
       tempStreak++;
@@ -198,7 +171,6 @@ export function calculateStreak(
     }
   }
 
-  // 2. Calculate Current Streak (Backwards loop with Grace Period)
   let todayIndex = findTodayIndex(uniqueDays, timezone, now);
 
   if (todayIndex < 0) {
@@ -220,8 +192,6 @@ export function calculateStreak(
         (new Date(localTodayStr).getTime() - new Date(lastDateStr).getTime()) / 86400000
       );
 
-      // Issue #6171:
-      // only reject when today is missing AND gap > grace
       if (gapDays > Math.max(1, grace)) {
         todayIndex = -1;
       } else {
@@ -249,7 +219,6 @@ export function calculateStreak(
   const isActualToday = todayIndex >= 0 && uniqueDays[todayIndex].date === localTodayStr;
   const todayHasCommits = todayIndex >= 0 && uniqueDays[todayIndex].contributionCount > 0;
 
-  // If we are looking at the actual today, and it has no commits,
   const evaluationIndex =
     isActualToday && !todayHasCommits && consecutiveZeroDays < Math.max(1, grace)
       ? todayIndex - 1
@@ -376,9 +345,6 @@ export function calculateMonthlyStats(
   const isCalendarComplete = isPrevMonthComplete && isCurrentMonthComplete;
 
   const deltaAbsolute = currentMonthTotal - previousMonthTotal;
-  // When there is no baseline (previous month = 0), or the calendar is incomplete,
-  // the percentage change is mathematically undefined or untrustworthy.
-  // Return null so the renderer can display 'N/A' instead of misleading metrics.
   const deltaPercentage: number | null =
     !isCalendarComplete || previousMonthTotal === 0
       ? null
@@ -396,14 +362,6 @@ export function calculateMonthlyStats(
   };
 }
 
-/* ==========================================================================
- * EPIC FEATURES (ORG AGGREGATION & GITHUB WRAPPED)
- * ========================================================================== */
-
-/**
- * Aggregates multiple user contribution calendars into a single "Mega-City" calendar.
- * Used for Organization and Team dashboards.
- */
 export function aggregateCalendars(
   calendars?: ContributionCalendar[] | null
 ): ContributionCalendar {
@@ -416,7 +374,6 @@ export function aggregateCalendars(
     0
   );
 
-  // Use a Map keyed by the date string 'YYYY-MM-DD' to safely aggregate daily counts
   const dateMap = new Map<string, number>();
 
   for (const cal of calendars) {
@@ -431,7 +388,6 @@ export function aggregateCalendars(
     }
   }
 
-  // pick structural base
   const baseCalendar = calendars.find((c) => c?.weeks?.length)?.weeks
     ? calendars.find((c) => c?.weeks?.length)!
     : calendars[0];
@@ -445,19 +401,16 @@ export function aggregateCalendars(
 
   const existingDates = new Set<string>();
 
-  // update existing structure + preserve optional fields
   for (const week of result.weeks) {
     for (const day of week.contributionDays) {
       if (!day?.date) continue;
 
       existingDates.add(day.date);
 
-      // only override contributionCount, KEEP other fields
       day.contributionCount = dateMap.get(day.date) ?? 0;
     }
   }
 
-  // inject missing days into correct week (NOT new fake weeks)
   const missingDays: ContributionDay[] = [];
 
   for (const [date, count] of dateMap.entries()) {
@@ -471,7 +424,6 @@ export function aggregateCalendars(
 
   missingDays.sort((a, b) => a.date.localeCompare(b.date));
 
-  // append missing days into last week (or correct week placement)
   if (missingDays.length > 0) {
     let lastWeek = result.weeks[result.weeks.length - 1];
 
@@ -488,16 +440,6 @@ export function aggregateCalendars(
   return result;
 }
 
-/**
- * Chunks a flat, date-ordered list of contribution days into weekday-aligned weeks,
- * starting a new week on each Sunday. This mirrors GitHub's calendar layout so the
- * renderers keep their week (column) and weekday (row) grid instead of collapsing
- * every day into a single week.
- */
-/**
- * Chunks contribution days into weekly arrays, with the option to hide weekends.
- */
-
 export function chunkDaysIntoWeeks(
   days?: ContributionDay[] | null,
   hideWeekend: boolean = false
@@ -506,13 +448,10 @@ export function chunkDaysIntoWeeks(
     return [];
   }
 
-  // Filter out null/undefined days, empty dates, and invalid date formats
   const validDays = days.filter((day): day is ContributionDay => {
     if (day === null || day === undefined) return false;
     if (!day.date || typeof day.date !== 'string' || day.date.trim() === '') return false;
-    // Validate YYYY-MM-DD format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day.date)) return false;
-    // Ensure it's a valid date
     const dateObj = new Date(day.date);
     return !isNaN(dateObj.getTime());
   });
@@ -521,22 +460,19 @@ export function chunkDaysIntoWeeks(
     return [];
   }
 
-  // Sort days chronologically
   const sorted = [...validDays].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  // Filter out weekends if hideWeekend is true
   let filteredDays = sorted;
   if (hideWeekend) {
     filteredDays = sorted.filter((day) => {
       const date = new Date(day.date);
       const dayOfWeek = date.getDay();
-      return dayOfWeek !== 0 && dayOfWeek !== 6; // Exclude Sunday (0) and Saturday (6)
+      return dayOfWeek !== 0 && dayOfWeek !== 6;
     });
   }
 
-  // If no days left after filtering, return empty array
   if (filteredDays.length === 0) {
     return [];
   }
@@ -546,7 +482,6 @@ export function chunkDaysIntoWeeks(
 
   for (let i = 0; i < filteredDays.length; i++) {
     const day = filteredDays[i];
-    // Ensure day is not null before accessing properties
     if (!day || !day.date) {
       continue;
     }
@@ -554,27 +489,22 @@ export function chunkDaysIntoWeeks(
     const currentDate = new Date(day.date);
     const currentDayOfWeek = currentDate.getDay();
 
-    // Start a new week if this is the first day
     if (i === 0) {
       currentWeek.push(day);
       continue;
     }
 
-    // Check if this day starts a new week
     const prevDate = new Date(filteredDays[i - 1].date);
     const prevDayOfWeek = prevDate.getDay();
 
-    // Determine if we need to start a new week
     let isNewWeek = false;
 
     if (hideWeekend) {
-      // When weekends are hidden, start a new week if the gap between days is more than 1
       const dayDiff = Math.floor(
         (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
       );
       isNewWeek = dayDiff > 1;
     } else {
-      // Standard week logic: new week when day of week decreases
       isNewWeek = currentDayOfWeek <= prevDayOfWeek;
     }
 
@@ -588,7 +518,6 @@ export function chunkDaysIntoWeeks(
     currentWeek.push(day);
   }
 
-  // Push the last week
   if (currentWeek.length > 0) {
     weeks.push({
       contributionDays: currentWeek,
@@ -598,9 +527,6 @@ export function chunkDaysIntoWeeks(
   return weeks;
 }
 
-/**
- * Processes a calendar to generate deep insights for "GitHub Wrapped"
- */
 export function calculateWrappedStats(calendar?: ContributionCalendar | null) {
   if (!calendar) {
     return {
@@ -623,24 +549,20 @@ export function calculateWrappedStats(calendar?: ContributionCalendar | null) {
   days.forEach((day) => {
     if (!day || !day.date) return;
 
-    // Safety check for date parser
     const dateObj = new Date(day.date);
     if (isNaN(dateObj.getTime())) {
       return;
     }
 
     const count = day.contributionCount || 0;
-    // 1. Highest single day
     if (count > mostActiveDay.count) {
       mostActiveDay = { date: day.date, count };
     }
 
-    // 2. Busiest month
-    const month = day.date.substring(0, 7); // YYYY-MM
+    const month = day.date.substring(0, 7);
     monthCounts[month] = (monthCounts[month] || 0) + count;
 
-    // 3. Weekday vs Weekend grind
-    const dayOfWeek = dateObj.getUTCDay(); // 0 = Sunday, 6 = Saturday (UTC)
+    const dayOfWeek = dateObj.getUTCDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       weekendCommits += count;
     } else {
@@ -648,7 +570,6 @@ export function calculateWrappedStats(calendar?: ContributionCalendar | null) {
     }
   });
 
-  // Find busiest month string
   const busiestMonthStr =
     Object.keys(monthCounts).length === 0
       ? 'N/A'
@@ -665,35 +586,17 @@ export function calculateWrappedStats(calendar?: ContributionCalendar | null) {
   };
 }
 
-/**
- * Normalizes the structural layout of a contribution calendar.
- *
- * This function aggregates duplicate calendar dates, sorts them
- * chronologically, and re-groups them into Sunday-Saturday week buckets.
- *
- * NOTE:
- * ContributionDay entries only contain date strings (YYYY-MM-DD)
- * and do not include timestamps or timezone information.
- * Therefore, no actual timezone conversion is performed.
- *
- * @param calendar The contribution calendar to normalize
- * @param _targetTimezone Reserved for future use. Currently unused because
- * date-only contribution data cannot be shifted across timezone boundaries.
- * @returns A calendar with normalized week structure
- */
 export function normalizeCalendarToTimezone(
   calendar: ContributionCalendar,
-  _targetTimezone: string // retained for backward compatibility with existing callers
+  _targetTimezone: string
 ): ContributionCalendar {
   void _targetTimezone;
   if (!calendar || !calendar.weeks || calendar.weeks.length === 0) {
     return calendar;
   }
 
-  // Flatten all contribution days
   const allDays = calendar.weeks.flatMap((week) => week.contributionDays || []);
 
-  // Group contributions by target timezone date
   const dateMap = new Map<string, number>();
 
   for (const day of allDays) {
@@ -703,10 +606,8 @@ export function normalizeCalendarToTimezone(
     dateMap.set(day.date, currentCount + (day.contributionCount || 0));
   }
 
-  // Sort dates and create weeks
   const sortedDates = Array.from(dateMap.entries()).sort(([a], [b]) => a.localeCompare(b));
 
-  // Group into weeks (Sunday to Saturday)
   const weeks: ContributionWeek[] = [];
   let currentWeek: ContributionDay[] = [];
 
@@ -717,7 +618,6 @@ export function normalizeCalendarToTimezone(
     );
     const dayOfWeek = dateObj.getUTCDay();
 
-    // Start a new week on Sunday
     if (dayOfWeek === 0 && currentWeek.length > 0) {
       weeks.push({ contributionDays: currentWeek });
       currentWeek = [];
@@ -726,7 +626,6 @@ export function normalizeCalendarToTimezone(
     currentWeek.push({ date, contributionCount });
   }
 
-  // Add the last week
   if (currentWeek.length > 0) {
     weeks.push({ contributionDays: currentWeek });
   }

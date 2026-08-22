@@ -1,20 +1,10 @@
 import 'server-only';
 
-/**
- * A queue to stagger incoming sync tasks across the available hourly quota.
- * This prevents the application from making too many concurrent requests to the GitHub API,
- * which could lead to rate limit exhaustion.
- */
 export class SyncQueue {
   private queue: (() => Promise<void>)[] = [];
   private isProcessing = false;
-  // Delay between processing tasks to stagger API usage (e.g., 2 seconds)
   private readonly STAGGER_DELAY_MS = 2000;
 
-  /**
-   * Enqueues a new sync task.
-   * @param task An async function representing the sync job.
-   */
   public enqueue(task: () => Promise<void>): void {
     if (process.env.NODE_ENV === 'test') {
       void task().catch((error) => {
@@ -43,7 +33,6 @@ export class SyncQueue {
       }
     }
 
-    // Stagger the next task to distribute API load evenly
     await new Promise((resolve) => setTimeout(resolve, this.STAGGER_DELAY_MS));
 
     this.isProcessing = false;

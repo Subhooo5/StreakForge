@@ -1,11 +1,5 @@
 import { NextResponse } from 'next/server';
 
-/**
- * Verifies the request carries a valid admin bearer token.
- *
- * The REVIEW_ADMIN_SECRET env var must be set. Clients send the token
- * via the Authorization header: `Authorization: Bearer <secret>`.
- */
 export function verifyReviewAdmin(req: Request): NextResponse | null {
   const secret = process.env.REVIEW_ADMIN_SECRET;
   if (!secret) {
@@ -23,5 +17,5 @@ export function verifyReviewAdmin(req: Request): NextResponse | null {
     );
   }
 
-  return null; // null means auth passed
+  return null;
 }

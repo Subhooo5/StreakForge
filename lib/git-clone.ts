@@ -23,10 +23,6 @@ export function buildGitCloneInvocation(
   return { command: 'git', args: baseArgs };
 }
 
-/**
- * Shallow-clones a GitHub repository without embedding credentials in the clone URL.
- * When a token is provided, it is passed via git http.extraHeader instead.
- */
 export async function cloneGitHubRepository(
   owner: string,
   repo: string,
