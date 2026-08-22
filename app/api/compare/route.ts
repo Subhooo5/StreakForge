@@ -12,21 +12,8 @@ import { recordComparison } from "./counters";
 import { fetchCompareUser } from "./fetch-user";
 import type { CompareBattlePayload } from "@/types/compare";
 
-/** Upstream budget for one head-to-head comparison (two profiles in parallel). */
 const COMPARE_TIMEOUT_MS = 15000;
 
-/**
- * Head-to-head data for the Compare page.
- *
- * Both sides run in parallel through `fetchCompareUser`, which rides the same
- * cached, rate-limited `lib/github` hot path the Dashboard uses but fetches
- * only what Compare renders. No second fetch path, no seeded values.
- *
- * A completed comparison is also recorded in the compare counters (the strip
- * of four live tiles and the Trending Showdowns "HOT" tallies). That write is
- * deliberately deferred: counters must never add latency to, or fail, a
- * comparison.
- */
 export async function GET(request: Request) {
   const start = Date.now();
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
@@ -57,7 +44,6 @@ export async function GET(request: Request) {
       if (!refreshRateLimiter.checkLimit(getClientIp(request)).success) {
         throw new Error("Rate Limit: Refresh rate limit exceeded. Please try again later.");
       }
-      // Both sides must clear the per-user cooldown, otherwise serve cached.
       if (refreshPolicy.isRefreshAllowed(user1) && refreshPolicy.isRefreshAllowed(user2)) {
         refreshPolicy.recordRefresh(user1);
         refreshPolicy.recordRefresh(user2);
@@ -77,8 +63,6 @@ export async function GET(request: Request) {
     const a = resultA.value;
     const b = resultB.value;
 
-    // `after` runs this once the response is on its way, so the counters never
-    // add latency and are not cut short when the function unfreezes.
     after(() =>
       recordComparison({
         userA: a.profile.username,
@@ -120,7 +104,6 @@ export async function GET(request: Request) {
   }
 }
 
-/** `fetchCompareUser` wraps upstream failures; dig out the real cause. */
 function unwrap(reason: unknown): unknown {
   let err: unknown = reason;
   while (err instanceof Error && err.cause instanceof Error) err = err.cause;

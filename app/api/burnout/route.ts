@@ -11,32 +11,8 @@ import { getClientIp } from "@/utils/getClientIp";
 import { dashboardErrorResponse } from "../dashboard/shared";
 import type { BurnoutReport } from "@/types/burnout";
 
-/**
- * Upstream budget for one repository analysis.
- *
- * Deliberately longer than the 15s the user-facing routes allow. Two costs
- * stack on a cold request: GitHub's `stats/contributors` payload is measured
- * in megabytes for a large repository (~12.5 MB and ~9s for facebook/react)
- * and answers 202 while it compiles statistics, and the Gemini recommendation
- * call runs after it on the same budget. At 45s the two together overran on
- * the largest repositories, which silently dropped those reports to
- * heuristics-only advice. Only the first request for a repository pays this —
- * the derived report is then cached for an hour.
- */
 const BURNOUT_TIMEOUT_MS = 75000;
 
-/**
- * Burnout and sustainability data for the Burnout Radar page.
- *
- * Rides the same quota, refresh-policy and rate-limit infrastructure as
- * `/api/compare` and `/api/dashboard`. No seeded values: every figure the page
- * renders is derived here from GitHub's repository statistics endpoints.
- *
- * `excludeBots` reaches the service rather than the client because filtering
- * bot accounts changes the commit totals every other figure is computed from —
- * contributor count, workload share, bus factor and the risk table all shift.
- * Each variant is cached separately.
- */
 export async function GET(request: Request) {
   const start = Date.now();
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
@@ -116,11 +92,6 @@ export async function GET(request: Request) {
   }
 }
 
-/**
- * Repository-shaped errors, falling through to the shared handler for
- * everything else. The shared one says "GitHub user not found", which is the
- * wrong noun for a route addressed by `owner/repo`.
- */
 function burnoutErrorResponse(error: unknown, requestId: string): NextResponse {
   const raw = error instanceof Error ? error.message : String(error);
   if (raw.toLowerCase().includes("not found")) {

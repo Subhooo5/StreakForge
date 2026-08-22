@@ -196,9 +196,9 @@ export async function GET(request: Request) {
 
     const ip = getClientIp(request);
 
-    // Treat either ?refresh=true or ?bypassCache=true as a cache-bypass request
     const isRefreshRequested = refresh || bypassCacheParam;
 
+    // Rate-limits manual refreshes against GitHub quota
     if (isRefreshRequested && quotaMonitor.isQuotaLow()) {
       throw new Error('Rate Limit: GitHub API quota is low. Cache refresh temporarily disabled.');
     }
@@ -341,7 +341,6 @@ export async function GET(request: Request) {
       return themes[themeKey] || themes.dark;
     })();
 
-    // If 'org' is provided, we use it as the display user
     const targetEntity =
       org ||
       (user.includes(',')
@@ -353,7 +352,6 @@ export async function GET(request: Request) {
         : user);
     const animate = searchParams.get('animate') !== 'false';
     const compact = searchParams.get('compact') === 'true';
-    // Validate and clamp the speed param to prevent broken SVG animation
     const rawSpeedNum = speed ? parseFloat(String(speed)) : NaN;
     const validatedSpeed = (
       !isNaN(rawSpeedNum) && isFinite(rawSpeedNum) && rawSpeedNum >= 1 && rawSpeedNum <= 60
@@ -421,12 +419,6 @@ export async function GET(request: Request) {
       hide_weekend,
     };
 
-    // ─── Repository Spotlight view ──────────────────────────────────────────
-    // Reads the SAME cached, rate-limited `fetchUserRepos` the dashboard uses,
-    // so no parallel repo route is needed. `format=json` lists the user's
-    // public repositories (the Generator's spotlight selector); otherwise the
-    // selected repo renders as the spotlight card SVG. Short-circuits before
-    // the contribution-calendar fetch — this view never needs it.
     if (normalizedView === 'spotlight') {
       const spotlightUser = (user || '').split(',')[0]?.trim();
       if (!spotlightUser) {
@@ -525,7 +517,6 @@ export async function GET(request: Request) {
     let repoContributions: RepoContribution[] = [];
     let servedFromStaleCache = false;
 
-    // Fetch Organization Mega-City Data OR Single User Data
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -639,13 +630,11 @@ export async function GET(request: Request) {
       });
       clearTimeout(timeoutId);
     }
-    // Pre-calculate full, unsliced statistics first
     let fullStats: StreakStats;
     let fullVersusStats: StreakStats | undefined;
     let fullWeekdayStats: StreakStats | undefined;
 
     if (versus && versusCalendar) {
-      // Normalize both calendars to the target timezone for accurate comparison
       const normalizedCalendar = normalizeCalendarToTimezone(calendar, timezone);
       const normalizedVersusCalendar = normalizeCalendarToTimezone(versusCalendar, timezone);
 
@@ -679,7 +668,7 @@ export async function GET(request: Request) {
         const filteredDays = allDays.slice(-effectiveDays);
         calendar = {
           totalContributions: filteredDays.reduce((sum, d) => sum + d.contributionCount, 0),
-          weeks: chunkDaysIntoWeeks(filteredDays, hide_weekend), // ← ADD hide_weekend
+          weeks: chunkDaysIntoWeeks(filteredDays, hide_weekend),
         };
 
         if (versusCalendar) {
@@ -693,12 +682,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // ─── JSON output mode ──────────────────────────────────────────────────
     if (format === 'json') {
-      // Profile details (login, display name, avatar, public repo count) for the
-      // primary user — lets the Home page render its verified-profile chip and
-      // repo count from this SAME route. Best-effort + cached via
-      // fetchUserProfile's DistributedCache, so it never blocks the stats path.
       let profile: { login: string; name: string; avatar: string; repos: number } | null = null;
       const primaryUser = (user || '').split(',')[0]?.trim();
       if (primaryUser) {
@@ -711,7 +695,6 @@ export async function GET(request: Request) {
             repos: p.public_repos,
           };
         } catch {
-          /* profile is best-effort; omit on failure */
         }
       }
 
@@ -766,7 +749,6 @@ export async function GET(request: Request) {
       });
     }
 
-    // ─── SVG output mode (default) ──────────────────────────────────────────
     let svg = '';
     if (normalizedView === 'monthly') {
       svg = generateMonthlySVG(fullMonthlyStats, params);
@@ -775,8 +757,6 @@ export async function GET(request: Request) {
     } else if (normalizedView === 'heatmap') {
       svg = generateHeatmapSVG(fullStats, params, calendar);
     } else if (normalizedView === 'pulse') {
-      // We still use calculateStreak here to efficiently parse totalContributions for the stat display,
-      // even though the sparkline generator will extract its own daily 30-day timeline below.
       svg = generatePulseSVG(fullStats, params, calendar);
     } else if (normalizedView === 'skyline') {
       svg = generateSkylineSVG(fullStats, params, calendar);
@@ -790,7 +770,6 @@ export async function GET(request: Request) {
     } else if (normalizedView === 'activity_graph') {
       svg = generateActivityGraphSVG(fullStats, params, calendar);
     } else if (normalizedView === 'punchcard') {
-      // Weekday × hour matrix, so the view can show *when* the work happens.
       const punchCard = await fetchCommitPunchCard(user, undefined, timezone).catch(() =>
         Array.from({ length: 7 }, () => new Array(24).fill(0))
       );
@@ -804,7 +783,6 @@ export async function GET(request: Request) {
       const normalizedCalendar = normalizeCalendarToTimezone(calendar, timezone);
       svg = generateWeekdaySVG(fullWeekdayStats || fullStats, params, normalizedCalendar);
     } else if (versus && versusCalendar) {
-      // Normalize both calendars to the target timezone for accurate comparison
       const normalizedCalendar = normalizeCalendarToTimezone(calendar, timezone);
       const normalizedVersusCalendar = normalizeCalendarToTimezone(versusCalendar, timezone);
 
@@ -904,9 +882,6 @@ function sanitizeErrorMessage(message: string): string {
   if (message.includes('schema') || message.includes('Schema')) {
     return 'Invalid request parameters';
   }
-  // Preserve user-facing validation messages — these are intentional,
-  // safe error strings thrown by route-level validation and do not
-  // expose internal implementation details.
   const lower = message.toLowerCase();
   if (lower.includes('strictly for organizations')) {
     return 'This endpoint is strictly for organizations.';
@@ -920,9 +895,6 @@ function sanitizeErrorMessage(message: string): string {
   if (lower.includes('quota is low')) {
     return 'API rate limit quota is low. Please try again later.';
   }
-  // Issue #7263: Return a generic message for all other errors to
-  // prevent leaking internal implementation details (auth state, cache
-  // servers, token rotation info, etc.) to the client.
   return 'Something went wrong. Please try again later.';
 }
 
@@ -979,7 +951,6 @@ function buildErrorResponse(
     rawMessage.toLowerCase().includes('could not resolve');
   const isRateLimit = rawMessage.toLowerCase().includes('rate limit');
 
-  // 2. Safely detect if the error was a validation/client error
   const isValidationError =
     (error instanceof Error && error.name === 'ValidationError') ||
     rawMessage.toLowerCase().includes('invalid') ||
@@ -1057,7 +1028,6 @@ function buildErrorResponse(
     });
   }
 
-  // 3. Return a 400 Bad Request for Validation Errors
   if (isValidationError) {
     const validationSvg = buildInlineErrorSVG(message, {
       bg: errBg,
@@ -1079,7 +1049,6 @@ function buildErrorResponse(
     });
   }
 
-  // 4. Return a 504 Gateway Timeout for aborted/timed out requests
   if (isAbortError(error)) {
     const timeoutSvg = buildInlineErrorSVG('Request timed out. Please try again later.', {
       bg: errBg,
@@ -1101,7 +1070,6 @@ function buildErrorResponse(
     });
   }
 
-  // 5. Return a 500 Internal Server Error for real crashes
   logger.error('Unhandled error', {
     source: 'streak',
     message,

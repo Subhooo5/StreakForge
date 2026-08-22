@@ -8,24 +8,6 @@ import { logger, setRequestId, clearRequestId } from "@/lib/logger";
 import { readCounters, readPairCounts, pairKey, ZERO_COUNTERS } from "../counters";
 import type { ArenaGuess, ArenaLegend, ArenaPayload, ArenaPrediction, ArenaShowdown } from "@/types/compare";
 
-/**
- * Live data for the Compare page's pre-comparison battleground: Trending
- * Showdowns, Guess the Developer, AI Showdown Predictions, the four counter
- * tiles, and the GitHub Legends Walk of Fame.
- *
- * Two kinds of input meet here:
- *
- *  - **Editorial curation** — *which* developers and rivalries are featured.
- *    That is a human choice and stays a constant below (the same names the
- *    page already shipped with).
- *  - **Live data** — every figure and every avatar shown for them. Names,
- *    avatars, bios, follower counts, primary languages, star totals, the
- *    prediction verdicts and the HOT/ordering of the showdown cards are all
- *    read at request time from the cached `lib/github` pipeline and the
- *    compare counters. Nothing is hardcoded or seeded.
- */
-
-/** Curated head-to-head rivalries. Both sides are real GitHub user logins. */
 const SHOWDOWNS: { cat: string; a: string; b: string; sub: string }[] = [
   { cat: "Founding Fathers", a: "torvalds", b: "gvanrossum", sub: "Kernel vs Python" },
   { cat: "Founder Showdown", a: "rauchg", b: "biilmann", sub: "Vercel vs Netlify" },
@@ -35,10 +17,6 @@ const SHOWDOWNS: { cat: string; a: string; b: string; sub: string }[] = [
   { cat: "Framework Pioneers", a: "gaearon", b: "rich-harris", sub: "React vs Svelte" },
 ];
 
-/**
- * Curated roster behind the Walk of Fame, Guess the Developer and the
- * predictions. `role` is only a fallback for an empty GitHub bio.
- */
 const ROSTER: { login: string; role: string }[] = [
   { login: "yyx990803", role: "Vue.js & Vite Creator" },
   { login: "rich-harris", role: "Svelte & Rollup Creator" },
@@ -49,7 +27,6 @@ const ROSTER: { login: string; role: string }[] = [
   { login: "sindresorhus", role: "1000+ npm packages" },
 ];
 
-/** How many showdown cards carry the HOT flag once battles start landing. */
 const HOT_CARDS = 3;
 
 const ARENA_TTL_MS = 30 * 60 * 1000;
@@ -74,8 +51,6 @@ export async function GET(request: Request) {
   setRequestId(requestId);
 
   try {
-    // Counters are read every time (they must feel live right after a battle);
-    // the GitHub-backed roster is cached, since notable profiles move slowly.
     const [roster, counters, pairCounts] = await Promise.all([
       loadRoster(),
       readCounters().catch(() => ZERO_COUNTERS),
@@ -102,10 +77,6 @@ export async function GET(request: Request) {
     return new NextResponse(body, {
       headers: {
         "Content-Type": "application/json",
-        // The counters in this payload must reflect a comparison the moment it
-        // completes, so the response itself is never cached. The expensive part
-        // — the legends roster — is memoised server-side in `arenaCache`, so
-        // this stays fast without serving stale tallies.
         "Cache-Control": "no-store, must-revalidate",
         ETag: etag,
         "X-Request-ID": requestId,
@@ -119,12 +90,6 @@ export async function GET(request: Request) {
   }
 }
 
-// ─── roster ────────────────────────────────────────────────────────────────
-
-/**
- * Live profile + repository data for every roster member. Individual failures
- * drop that member rather than emptying the whole arena.
- */
 async function loadRoster(): Promise<RosterEntry[]> {
   const cacheKey = "compare:arena:roster";
   const cached = await arenaCache.get(cacheKey);
@@ -160,7 +125,6 @@ async function loadRoster(): Promise<RosterEntry[]> {
   return roster;
 }
 
-/** Most frequent primary language across a developer's own repositories. */
 function primaryLanguage(repos: GitHubRepo[]): string {
   const counts = new Map<string, number>();
   for (const repo of repos) {
@@ -179,16 +143,6 @@ function primaryLanguage(repos: GitHubRepo[]): string {
   return best || "—";
 }
 
-// ─── section builders ──────────────────────────────────────────────────────
-
-/**
- * Order the showdown cards by how often that pairing has actually been
- * battled, flagging the busiest as HOT.
- *
- * Before any battles are recorded there is nothing to rank, so the curated
- * order stands and every card keeps its HOT flag — the state the page shipped
- * in. The tally takes over as soon as real comparisons land.
- */
 function buildShowdowns(pairCounts: Record<string, number>): ArenaShowdown[] {
   const withCounts = SHOWDOWNS.map((s, index) => ({ ...s, battles: pairCounts[pairKey(s.a, s.b)] ?? 0, index }));
   const anyBattles = withCounts.some((s) => s.battles > 0);
@@ -217,10 +171,6 @@ function toLegend(entry: RosterEntry): ArenaLegend {
   };
 }
 
-/**
- * One round of Guess the Developer. Every hint is a real, live figure for the
- * hidden developer, phrased so it never names them.
- */
 function toGuess(entry: RosterEntry): ArenaGuess {
   const hints = [
     `${abbreviate(entry.followers)} followers on GitHub`,
@@ -237,11 +187,6 @@ function toGuess(entry: RosterEntry): ArenaGuess {
   };
 }
 
-/**
- * Pair adjacent roster members and judge each matchup on whichever dimension
- * separates them most, in relative terms. Both the category and the verdict
- * sentence are computed from the two developers' real figures.
- */
 function buildPredictions(roster: RosterEntry[]): ArenaPrediction[] {
   const predictions: ArenaPrediction[] = [];
 
@@ -255,7 +200,6 @@ function buildPredictions(roster: RosterEntry[]): ArenaPrediction[] {
       { cat: "PROLIFIC BUILDER", noun: "public repositories", valueA: a.publicRepos, valueB: b.publicRepos },
     ];
 
-    // Widest relative gap = the dimension this matchup is really about.
     const decisive = dimensions.reduce((best, d) => (gap(d.valueA, d.valueB) > gap(best.valueA, best.valueB) ? d : best), dimensions[0]);
 
     const leader = decisive.valueA >= decisive.valueB ? a : b;
@@ -274,13 +218,11 @@ function buildPredictions(roster: RosterEntry[]): ArenaPrediction[] {
   return predictions;
 }
 
-/** Relative separation between two figures, 0 (level) to 1 (total). */
 function gap(a: number, b: number): number {
   const total = a + b;
   return total === 0 ? 0 : Math.abs(a - b) / total;
 }
 
-/** 203412 → "203k", 1_450_000 → "1.5m". */
 function abbreviate(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
   if (n >= 1_000) return `${Math.round(n / 1_000)}k`;

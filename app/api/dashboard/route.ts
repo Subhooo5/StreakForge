@@ -9,15 +9,6 @@ import { getClientIp } from "@/utils/getClientIp";
 import type { RepoActivityInfo } from "@/types/dashboard";
 import { readUserParam, dashboardErrorResponse, DASHBOARD_TIMEOUT_MS } from "./shared";
 
-/**
- * Overview-tab data for the Dashboard page.
- *
- * Serves the fetch -> calculate pipeline in `lib/github.ts` (profile, streak
- * stats, languages, day-by-day activity, insights, commit clock, popular repos,
- * deployments, hall of fame, ecosystem graph) plus the repo push timestamps the
- * "Inactive Repository Reminder" needs. Individual GitHub users only — org
- * handling is intentionally out of scope for StreakForge.
- */
 export async function GET(request: Request) {
   const start = Date.now();
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
@@ -56,8 +47,6 @@ export async function GET(request: Request) {
     const options = { bypassCache, signal: controller.signal };
     const data = await getFullDashboardData(username, options);
 
-    // Push timestamps drive the Inactive Repository Reminder. fetchUserRepos is
-    // cached (and already warm from getFullDashboardData), so this is a hit.
     const repoActivity: RepoActivityInfo[] = await fetchUserRepos(username, options)
       .then((repos) =>
         repos

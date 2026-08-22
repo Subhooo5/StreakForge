@@ -5,29 +5,8 @@ import { LANGUAGE_COLORS } from "@/lib/svg/languageColors";
 import type { ContributionCalendar } from "@/types";
 import type { CompareUserPayload } from "@/types/compare";
 
-// Lean per-user fetch for the Compare page.
-//
-// Compare used to call `getFullDashboardData`, which additionally fetches
-// contributed repos, popular repos, pinned repos, starred repos and the
-// deployment tracker, then builds the hall of fame, achievements, insights,
-// commit clock and ecosystem graph — none of which Compare renders. Two sides
-// of that is a lot of GitHub round trips for data that gets thrown away.
-//
-// This does only the three cached calls Compare's payload actually needs, and
-// derives the rest locally with the same helpers the dashboard uses, so the
-// numbers stay identical to the ones the Dashboard shows.
-
-/**
- * Trailing window sent for the activity heatmap: the full contribution year,
- * matching what github.com/<user> shows.
- *
- * The calendar the GraphQL API returns already covers a year, so this keeps
- * all of it rather than trimming — the heatmap slices it into whole
- * Sunday-first columns itself.
- */
 const ACTIVITY_DAYS = 371;
 
-/** How many languages the breakdown shows per side. */
 const MAX_LANGUAGES = 5;
 
 const EMPTY_CALENDAR: ContributionCalendar = { totalContributions: 0, weeks: [] };
@@ -38,15 +17,11 @@ export interface FetchCompareUserOptions {
   token?: string;
 }
 
-/**
- * Real profile, streak stats, language breakdown and recent activity for one
- * side of a comparison. Throws if the profile or the contribution calendar
- * cannot be fetched — a comparison is meaningless without either.
- */
 export async function fetchCompareUser(username: string, options: FetchCompareUserOptions = {}): Promise<CompareUserPayload> {
   const [profileResult, reposResult, calendarResult] = await Promise.allSettled([
     fetchUserProfile(username, options),
     fetchUserRepos(username, options),
+    // External GitHub fetch
     fetchGitHubContributions(username, options),
   ]);
 
@@ -58,7 +33,6 @@ export async function fetchCompareUser(username: string, options: FetchCompareUs
   }
 
   const profile = profileResult.value;
-  // Repos only feed the star total, so a failure here degrades rather than fails.
   const repos = reposResult.status === "fulfilled" ? reposResult.value : [];
   const contributions = calendarResult.value;
   const calendar = contributions.calendar ?? EMPTY_CALENDAR;
@@ -86,15 +60,12 @@ export async function fetchCompareUser(username: string, options: FetchCompareUs
       totalReviews: contributions.totalReviews ?? 0,
     },
     languages: buildLanguages(contributions.repoContributions ?? []),
-    // Only `date`/`count`/`intensity` survive — the payload carries no
-    // lines-of-code. The view buckets this into whole Sunday-first weeks.
     activity: buildActivityMap(allDays)
       .slice(-ACTIVITY_DAYS)
       .map(({ date, count, intensity }) => ({ date, count, intensity })),
   };
 }
 
-/** Contribution-weighted language share, matching the dashboard's breakdown. */
 function buildLanguages(repoContributions: { repository: { primaryLanguage?: { name: string } | null }; contributions: { totalCount: number } }[]) {
   const counts: Record<string, number> = {};
   for (const contribution of repoContributions) {

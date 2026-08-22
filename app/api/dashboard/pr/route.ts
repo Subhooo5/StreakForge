@@ -4,13 +4,6 @@ import { fetchPRInsights } from "@/services/github/pr-insights";
 import { logger, setRequestId, clearRequestId } from "@/lib/logger";
 import { readUserParam, dashboardErrorResponse, DASHBOARD_TIMEOUT_MS } from "../shared";
 
-/**
- * PR Insights tab data — pull request totals, merge rate, cycle/review timings,
- * activity trends, size distribution, review analytics and repo performance.
- *
- * Fetching/aggregation lives in `services/github/pr-insights.ts`; this route
- * only handles validation, caching headers and error mapping.
- */
 export async function GET(request: Request) {
   const start = Date.now();
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();

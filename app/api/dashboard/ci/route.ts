@@ -4,13 +4,6 @@ import { fetchCIAnalytics } from "@/services/github/ci-analytics";
 import { logger, setRequestId, clearRequestId } from "@/lib/logger";
 import { readUserParam, dashboardErrorResponse, DASHBOARD_TIMEOUT_MS } from "../shared";
 
-/**
- * CI Analytics tab data — GitHub Actions workflow runs, status breakdown,
- * run-volume trends, per-repo CI health and headline insights.
- *
- * Fetching/aggregation lives in `services/github/ci-analytics.ts`; this route
- * only handles validation, caching headers and error mapping.
- */
 export async function GET(request: Request) {
   const start = Date.now();
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();

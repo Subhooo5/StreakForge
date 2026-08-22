@@ -1,10 +1,3 @@
-/**
- * Internal validation-result cache for the streak API route.
- *
- * Extracted into its own module so that tests can import
- * `getValidationCacheForTests` without triggering the Next.js type-checker
- * constraint that forbids arbitrary named exports on route files.
- */
 import { streakParamsSchema } from '@/lib/validations';
 
 export const VALIDATION_CACHE_MAX = 256;
@@ -20,6 +13,7 @@ export function normalizeCacheKey(params: URLSearchParams): string {
   return entries.map(([k, v]) => `${k}=${v}`).join('&');
 }
 
+// Caches parsed params per query key
 export function cachedValidation(
   key: string,
   parseFn: () => ReturnType<typeof streakParamsSchema.safeParse>
@@ -39,7 +33,6 @@ export function cachedValidation(
   return cached;
 }
 
-/** Exposed for tests only — do NOT import in production code paths. */
 export function getValidationCacheForTests() {
   return validationCache;
 }

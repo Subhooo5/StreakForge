@@ -4,17 +4,10 @@ import { isAbortError } from "@/lib/github";
 import { logger } from "@/lib/logger";
 import { GITHUB_USERNAME_REGEX } from "@/lib/validations";
 
-/** Upstream budget for a single dashboard request. */
 export const DASHBOARD_TIMEOUT_MS = 15000;
 
 export type UserParamResult = { ok: true; user: string } | { ok: false; error: string };
 
-/**
- * Validate the `?user=` query param.
- *
- * StreakForge supports individual GitHub accounts only, so a single login is
- * accepted here — no comma lists and no organization path.
- */
 export function readUserParam(searchParams: URLSearchParams): UserParamResult {
   const raw = (searchParams.get("user") ?? "").trim();
   if (!raw) return { ok: false, error: "Missing user parameter" };
@@ -23,14 +16,6 @@ export function readUserParam(searchParams: URLSearchParams): UserParamResult {
   return { ok: true, user: raw };
 }
 
-/**
- * Flattens an error and everything it wraps into one searchable string.
- *
- * `lib/github` re-throws with a generic summary (`Failed to fetch profile for
- * user "x"`) and keeps GitHub's real message (`Could not resolve to a User…`)
- * on `cause`. Matching only the top-level message therefore turned every
- * unknown login into a 500 "Something went wrong" instead of a 404.
- */
 function describeError(error: unknown): string {
   const parts: string[] = [];
   let current: unknown = error;
@@ -50,10 +35,6 @@ function describeError(error: unknown): string {
   return parts.join(" | ");
 }
 
-/**
- * Map an upstream failure onto a JSON error response, mirroring the status
- * codes `/api/streak` uses so the client can treat both the same way.
- */
 export function dashboardErrorResponse(error: unknown, requestId: string, source: string): NextResponse {
   const raw = describeError(error);
   const lower = raw.toLowerCase();
