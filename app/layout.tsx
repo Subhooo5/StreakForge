@@ -6,11 +6,7 @@ export const metadata: Metadata = {
   description: "StreakForge",
 };
 
-// Runs before first paint: applies the persisted theme to <html> so a dark
-// session renders dark from frame 0 (no light→dark flash on navigation). The
-// per-page wrapper still carries its own `sf dark` class via useTheme; this
-// only seeds the cascade early. Keep in sync with the `sf-theme` key + `dark`
-// class used by hooks/useTheme.ts.
+// Applies theme before first paint
 const themeBootScript = `(function(){try{var t=localStorage.getItem('sf-theme');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -6,10 +6,6 @@ import { useTheme } from "@/hooks/useTheme";
 import { useUrlBackedState } from "@/hooks/useUrlParams";
 import { useRecentList } from "@/hooks/useRecentList";
 
-// Sticky-navbar control styles. Border is declared LONGHAND on purpose: the
-// hover state overrides `borderColor` alone, and mixing that with the `border`
-// shorthand makes React drop the property between renders and kills the
-// transition. Home is the canonical navbar per CLAUDE.md POST-PORT CONVENTIONS.
 const NAV_REPO_BASE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -46,13 +42,10 @@ const NAV_TOGGLE_HOVER: React.CSSProperties = {
   borderColor: "var(--accent)",
 };
 
-// DC `data-props` editor knobs → component constants (defaults from the export).
 const cityPalette = "Brand";
 const monolithHeight = 1.1;
 const gridReactivity = 1.2;
 
-// Reproduces the mockup's `style-hover="..."` behaviour with React hover state.
-// `base` styles stay verbatim; `hover` styles are merged on pointer-enter.
 type HoverProps = React.HTMLAttributes<HTMLElement> & {
   as?: React.ElementType;
   base?: React.CSSProperties;
@@ -74,8 +67,6 @@ function Hover({ as = "div", base, hover, children, ...rest }: HoverProps) {
 
 type Poly = { pts: number[][]; fill: string; op: number; depth: number };
 
-// Shared circular close/clear button — reused by the username-input clear
-// affordance AND the deploy modal's close control (one component, not two).
 function CloseButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <Hover as="button" onClick={onClick} aria-label={label} title={label} base={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "50%", color: "var(--soft)", flex: "none", transition: "color .16s,background .16s" }} hover={{ color: "var(--text)", background: "var(--surface)" }}>
@@ -86,19 +77,14 @@ function CloseButton({ onClick, label }: { onClick: () => void; label: string })
   );
 }
 
-/** A recent search is identified by the login itself. */
 const recentUserKey = (login: string) => login;
 
 export default function HomeClient() {
   const [theme, toggleTheme] = useTheme();
-  // Mirrored into `?user=` so a previewed handle is linkable and survives a
-  // refresh — the standard query-param contract across every route.
   const [username, setUsername] = useUrlBackedState("user");
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  // Recent searches persist client-side (localStorage) via the shared
-  // recent-list hook — the same mechanism Compare uses for its matchups.
   const { recent, remember: rememberRecent, clear: clearRecent } = useRecentList<string>("sf-recent-users", recentUserKey);
   const [showDashPrompt, setShowDashPrompt] = useState(false);
   const inputRef = useRef<HTMLDivElement>(null);
@@ -111,7 +97,6 @@ export default function HomeClient() {
 
   const stats = useHomeStats(username);
 
-  // ---- imperative renderers (ported verbatim) ----
   const isoPolys = (): Poly[] => {
     const cols = 14,
       rows = 7,
@@ -119,8 +104,6 @@ export default function HomeClient() {
       th = 12,
       ox = 180,
       oy = 78;
-    // No username yet → render the bare isometric base (every cell height 0),
-    // so the landing preview shows an empty plinth with no towers.
     const u = (username || "").trim();
     const seed = (hash((u || "streakforge").toLowerCase()) % 1000) / 120;
     const scale = monolithHeight ?? 1;
@@ -200,7 +183,6 @@ export default function HomeClient() {
     );
   };
 
-  // Downloads the EXACT SVG shown in the live preview
   const downloadSvg = async () => {
     const badgeUser = username.trim() && stats.login ? stats.login : "demo";
     try {
@@ -215,12 +197,9 @@ export default function HomeClient() {
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
-      /* ignore */
     }
   };
 
-  // The embed username: the validated login (canonical casing) when available,
-  // else the typed value, else the placeholder used in step 1.
   const snippetUser = () => stats.login || username.trim() || "YOUR_USERNAME";
   const markdownSnippet = () => `![StreakForge](https://streakforge.dev/api/streak?user=${snippetUser()})`;
 
@@ -234,19 +213,15 @@ export default function HomeClient() {
     setModalOpen(true);
   };
 
-  // Record a username in "recent" once it validates to a real profile (a
-  // search that successfully returned a badge). Deduped, most-recent-first.
   useEffect(() => {
     if (!stats.login || stats.error) return;
     rememberRecent(stats.login);
   }, [stats.login, stats.error, rememberRecent]);
 
-  // Typing a username dismisses the "please enter a username" prompt.
   useEffect(() => {
     if (username.trim()) setShowDashPrompt(false);
   }, [username]);
 
-  // Close the deploy modal on Escape.
   useEffect(() => {
     if (!modalOpen) return;
     const onEsc = (e: KeyboardEvent) => {
@@ -256,12 +231,8 @@ export default function HomeClient() {
     return () => window.removeEventListener("keydown", onEsc);
   }, [modalOpen]);
 
-  // Clearing the input reverts the badge to the demo state. The just-cleared
-  // username is already in "recent" (captured on validation above).
   const clearInput = () => setUsername("");
 
-  // Dashboard-access buttons: with no username, scroll to the input and prompt;
-  // otherwise open the dashboard for the entered user.
   const goDashboard = (e: React.MouseEvent) => {
     e.preventDefault();
     const u = username.trim();
@@ -274,8 +245,6 @@ export default function HomeClient() {
   };
 
   const toggleMenu = () => setMenuOpen((m) => !m);
-  // Stats/city update live as the username changes, so Forge/Enter are no-ops
-  // for now; they become the data-fetch trigger when the API is wired.
   const onGenerate = () => {};
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") onGenerate();
@@ -308,7 +277,6 @@ export default function HomeClient() {
     return pills;
   };
 
-  // ---- lifecycle: grid canvas + scroll reveal (componentDidMount/Unmount) ----
   useEffect(() => {
     const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     reduceRef.current = reduce;
@@ -468,7 +436,6 @@ export default function HomeClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-read --dot/--dot-hot from CSS vars after a theme change.
   useEffect(() => {
     readGridColorsRef.current?.();
   }, [theme]);
@@ -480,7 +447,7 @@ export default function HomeClient() {
       <canvas ref={gridRef} style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" }}></canvas>
 
       <div style={{ position: "relative", zIndex: 2 }}>
-        {/* TICKER */}
+        {}
         <div style={{ width: "100%", borderBottom: "1px solid var(--line2)", background: "var(--surface)", backdropFilter: "blur(10px)", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", height: "34px", width: "max-content", animation: "sf-ticker 38s linear infinite" }}>
             {[0, 1].map((dup) => (
@@ -512,7 +479,7 @@ export default function HomeClient() {
           </div>
         </div>
 
-        {/* NAV */}
+        {}
         <header style={{ position: "sticky", top: 0, zIndex: 40 }}>
           <div style={{ background: "var(--surface)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--line2)" }}>
             <nav style={{ maxWidth: "1240px", margin: "0 auto", padding: "14px clamp(16px,4vw,40px)", display: "flex", alignItems: "center", gap: "28px" }}>
@@ -576,7 +543,7 @@ export default function HomeClient() {
         </header>
 
         <main id="top" data-screen-label="StreakForge Home">
-          {/* HERO (A) */}
+          {}
           <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "clamp(56px,9vw,108px) clamp(16px,4vw,40px) clamp(30px,4vw,46px)", textAlign: "center" }}>
             <div className="ui" data-reveal="" style={{ display: "inline-flex", alignItems: "center", gap: "9px", padding: "7px 15px", border: "1px solid var(--line)", borderRadius: "100px", background: "var(--surface)", fontSize: "12.5px", letterSpacing: ".02em", color: "var(--soft)" }}>
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--accent)", boxShadow: "0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)" }}></span>
@@ -607,7 +574,7 @@ export default function HomeClient() {
             </div>
           </section>
 
-          {/* GENERATOR (B) */}
+          {}
           <section id="generator" data-screen-label="Generator" style={{ maxWidth: "980px", margin: "0 auto", padding: "clamp(20px,4vw,40px) clamp(16px,4vw,40px) clamp(40px,6vw,72px)" }}>
             <div data-reveal="" style={{ background: "var(--surface)", backdropFilter: "blur(14px)", border: "1px solid var(--line)", borderRadius: "26px", padding: "clamp(20px,3.5vw,40px)", boxShadow: "var(--shadow)" }}>
               <div ref={inputRef} className="ui" style={{ display: "flex", alignItems: "center", gap: "13px", flexWrap: "wrap", background: "var(--surface2)", border: "1px solid var(--line)", borderRadius: "15px", padding: "7px 7px 7px 18px", maxWidth: "560px", margin: "0 auto", scrollMarginTop: "90px" }}>
@@ -624,14 +591,14 @@ export default function HomeClient() {
                 </button>
               </div>
 
-              {/* Dashboard-access prompt — only after a dashboard button is clicked with no username. */}
+              {}
               {showDashPrompt && !username.trim() && (
                 <div className="ui" role="status" style={{ maxWidth: "560px", margin: "10px auto 0", textAlign: "center", fontSize: "13px", fontWeight: 600, color: "var(--accent-ink)" }}>
                   Please enter a GitHub username to access dashboard
                 </div>
               )}
 
-              {/* Live profile status: verified (real login + name) or not-found. Hidden when empty. */}
+              {}
               {username.trim() && (
                 <div className="ui" style={{ maxWidth: "560px", margin: "10px auto 0", minHeight: "20px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap", fontSize: "13px" }}>
                   {stats.loading && !stats.login && !stats.error && <span style={{ color: "var(--soft)" }}>Checking…</span>}
@@ -654,7 +621,7 @@ export default function HomeClient() {
                 </div>
               )}
 
-              {/* Recent successful searches — persisted client-side (localStorage). */}
+              {}
               {recent.length > 0 && (
                 <div className="ui" style={{ maxWidth: "560px", margin: "8px auto 0", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
                   <span style={{ fontSize: "10.5px", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--faint)", fontWeight: 700, flex: "none" }}>Recent:</span>
@@ -669,12 +636,10 @@ export default function HomeClient() {
                 </div>
               )}
 
-              {/* MONOLITH STAGE */}
+              {}
               <div style={{ position: "relative", marginTop: "14px", borderRadius: "20px", overflow: "hidden", background: "radial-gradient(120% 90% at 50% 8%,var(--stage),var(--stage2))", border: "1px solid var(--stage-line)" }}>
                 <div style={{ position: "relative", padding: "clamp(8px,1.5vw,14px)" }}>
-                  {/* Self-contained lib/svg monolith badge — follows the typed (validated)
-                      username, reverting to the demo badge when the input is empty.
-                      Palette is driven by the ?theme= query param, never hardcoded. */}
+                  {}
                   <div style={{ maxWidth: "560px", margin: "0 auto", animation: "sf-float 8s ease-in-out infinite" }}>
                     <img src={`/api/streak?user=${encodeURIComponent(username.trim() && stats.login ? stats.login : "demo")}&theme=dark`} alt={username.trim() && stats.login ? `${stats.login} streak badge` : "StreakForge demo streak badge"} style={{ width: "100%", height: "auto", display: "block" }} />
                   </div>
@@ -697,7 +662,7 @@ export default function HomeClient() {
               </div>
             </div>
 
-            {/* DASHBOARD PREVIEW */}
+            {}
             <div id="dashboard" style={{ scrollMarginTop: "90px", marginTop: "clamp(34px,5vw,54px)" }}>
               <div className="ui" data-reveal="" style={{ display: "flex", alignItems: "center", gap: "11px", justifyContent: "center", marginBottom: "22px", fontSize: "12.5px", letterSpacing: ".04em", color: "var(--soft)", textTransform: "uppercase" }}>
                 <span style={{ height: "1px", width: "34px", background: "var(--line)" }}></span>
@@ -790,7 +755,7 @@ export default function HomeClient() {
             </div>
           </section>
 
-          {/* HOW IT WORKS (C) */}
+          {}
           <section id="how" style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(40px,6vw,80px) clamp(16px,4vw,40px)" }}>
             <div data-reveal="" style={{ maxWidth: "640px" }}>
               <div className="ui" style={{ fontSize: "12.5px", letterSpacing: ".1em", color: "var(--accent-ink)", textTransform: "uppercase", fontWeight: 600 }}>
@@ -832,7 +797,7 @@ export default function HomeClient() {
             </div>
           </section>
 
-          {/* CUSTOMIZATION STUDIO (D) */}
+          {}
           <section id="studio" data-screen-label="Customization Studio" style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px,3vw,40px) clamp(16px,4vw,40px) clamp(40px,6vw,80px)" }}>
             <div data-reveal="" style={{ position: "relative", overflow: "hidden", borderRadius: "26px", border: "1px solid var(--line)", background: "linear-gradient(140deg,var(--bg2),var(--surface))", boxShadow: "var(--shadow)" }}>
               <div style={{ position: "absolute", right: "-80px", top: "-80px", width: "340px", height: "340px", background: "radial-gradient(circle,color-mix(in srgb,var(--accent) 28%,transparent),transparent 65%)", filter: "blur(20px)", pointerEvents: "none" }}></div>
@@ -857,7 +822,7 @@ export default function HomeClient() {
             </div>
           </section>
 
-          {/* WHY (E) */}
+          {}
           <section id="why" style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px,3vw,40px) clamp(16px,4vw,40px) clamp(44px,6vw,88px)" }}>
             <div data-reveal="" style={{ textAlign: "center", maxWidth: "620px", margin: "0 auto" }}>
               <div className="ui" style={{ fontSize: "12.5px", letterSpacing: ".1em", color: "var(--accent-ink)", textTransform: "uppercase", fontWeight: 600 }}>
@@ -912,7 +877,7 @@ export default function HomeClient() {
             </div>
           </section>
 
-          {/* FOOTER (F) */}
+          {}
           <footer className="ui" style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(48px,7vw,90px) clamp(16px,4vw,40px) 40px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", gap: "30px" }}>
               <div style={{ minWidth: "180px" }}>
