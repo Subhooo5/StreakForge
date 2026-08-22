@@ -1,16 +1,6 @@
 import type { BurnoutReport } from '@/types/burnout';
 import type { BurnoutView } from '../data/deriveView';
 
-/**
- * Report exports for the Burnout Radar page.
- *
- * Every generator takes the *currently rendered* report and view, so an export
- * always reflects the active filter state — a report taken with bot exclusion
- * on carries the filtered totals and says so, and can never be the unfiltered
- * default.
- */
-
-/** `YYYY-MM-DD` in the viewer's own timezone, for filenames. */
 export function todayStamp(d = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -20,7 +10,6 @@ export function reportFileBase(report: BurnoutReport): string {
   return `${report.owner}-${report.repo}-report-${todayStamp()}`;
 }
 
-/** Serialises the data model the page renders, plus the filter it was taken under. */
 export function buildJson(report: BurnoutReport, view: BurnoutView): string {
   return JSON.stringify(
     {
@@ -64,13 +53,6 @@ export function buildJson(report: BurnoutReport, view: BurnoutView): string {
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-/**
- * Full Markdown report, mirroring the page's sections one-for-one.
- *
- * Used verbatim by both "Export as Markdown" and "Copy Markdown Summary" —
- * the reference implementation generates one document and either downloads or
- * copies it, so the two stay in sync by construction rather than by discipline.
- */
 export function buildMarkdown(report: BurnoutReport, view: BurnoutView): string {
   const L: string[] = [];
 
@@ -180,17 +162,13 @@ export function buildMarkdown(report: BurnoutReport, view: BurnoutView): string 
   return L.join('\n');
 }
 
-/** Share link reproducing this exact view, including the active filter. */
 export function buildShareLink(report: BurnoutReport): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const params = new URLSearchParams({ owner: report.owner, repo: report.repo });
-  // The filter is carried explicitly so a shared link opens the same numbers
-  // the sender was looking at, rather than the unfiltered default.
   if (report.botsExcluded) params.set('excludeBots', 'true');
   return `${origin}/burnout-analyzer?${params.toString()}`;
 }
 
-/** Hands the viewer a generated file. */
 export function downloadBlob(contents: BlobPart, filename: string, type: string): void {
   const url = URL.createObjectURL(new Blob([contents], { type }));
   const a = document.createElement('a');
@@ -207,7 +185,6 @@ export async function copyText(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
     return;
   }
-  // Clipboard API needs a secure context; fall back so plain-HTTP dev works.
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
@@ -218,12 +195,6 @@ export async function copyText(text: string): Promise<void> {
   if (!ok) throw new Error('Clipboard is unavailable in this browser.');
 }
 
-/**
- * Lays the report out as a PDF.
- *
- * jsPDF is imported dynamically so it never lands in the page's initial
- * bundle — it is only pulled when someone actually exports.
- */
 export async function buildPdf(report: BurnoutReport, view: BurnoutView): Promise<Blob> {
   const { default: JsPDF } = await import('jspdf');
   const doc = new JsPDF({ unit: 'pt', format: 'a4' });
@@ -260,7 +231,6 @@ export async function buildPdf(report: BurnoutReport, view: BurnoutView): Promis
     }
   };
 
-  /** Simple fixed-column table with a header rule and zebra rows. */
   const table = (cols: string[], widths: number[], rows: string[][]) => {
     const xs: number[] = [];
     let acc = M;
@@ -289,7 +259,6 @@ export async function buildPdf(report: BurnoutReport, view: BurnoutView): Promis
     y += 4;
   };
 
-  // ── title block ──
   doc.setFont('helvetica', 'bold').setFontSize(20).setTextColor(20, 20, 24);
   doc.text('Burnout & Sustainability Report', M, y);
   y += 24;

@@ -7,7 +7,6 @@ export type ExportAction = 'json' | 'markdown' | 'share' | 'summary' | 'pdf';
 interface ExportMenuProps {
   onAction: (action: ExportAction) => void;
   disabled?: boolean;
-  /** Action currently running, so its row can show progress. */
   busy?: ExportAction | null;
 }
 
@@ -44,13 +43,6 @@ const ITEMS: { key: ExportAction; label: string; icon: React.ReactNode; tint: st
   },
 ];
 
-/**
- * The Download Report menu.
- *
- * Rendered in a `position: relative` wrapper with the panel absolutely
- * positioned, so opening it never displaces anything around it — consistent
- * with the page's rule that no state change moves an unrelated section.
- */
 export default function ExportMenu({ onAction, disabled, busy }: ExportMenuProps) {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState<ExportAction | null>(null);
@@ -64,8 +56,6 @@ export default function ExportMenu({ onAction, disabled, busy }: ExportMenuProps
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
     };
-    // `capture` so the page's own window click handler (the canvas ripple)
-    // cannot swallow the outside-click before it reaches us.
     document.addEventListener('mousedown', onDown, true);
     document.addEventListener('keydown', onKey);
     return () => {

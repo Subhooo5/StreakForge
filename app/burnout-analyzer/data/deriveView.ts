@@ -3,18 +3,6 @@
 import type { BurnoutReport } from "@/types/burnout";
 import { calculateBurnoutRisk, type BurnoutRiskResult } from "@/utils/calculateBurnoutRisk";
 
-/**
- * Maps a `BurnoutReport` onto the shapes the ported Burnout Radar markup
- * renders.
- *
- * The page's design is the contract, so this module exists to keep the view
- * unchanged while its numbers become real: every field below is computed from
- * the report the API returned, and nothing is seeded or invented. Where the
- * report has no data — an empty repository — the derived values are zeros and
- * the page shows an empty state rather than a plausible-looking chart.
- */
-
-/** Monday-first, matching `CommitTiming.byWeekday`. */
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export type ContributorData = {
@@ -83,7 +71,6 @@ export type BurnoutView = {
   riskColor: string;
 };
 
-/** Deterministic fallback tint for a contributor with no avatar. */
 function avatarTint(handle: string): string {
   let h = 2166136261;
   for (let i = 0; i < handle.length; i++) {
@@ -108,7 +95,6 @@ function healthOf(score: number): [string, string] {
   return ["At Risk", "var(--bad)"];
 }
 
-/** Maps the risk calculator's lucide icon keys onto the page's icon set. */
 const REC_ICONS: Record<string, string> = {
   Users: "users",
   UserPlus: "users",
@@ -122,8 +108,6 @@ const REC_ICONS: Record<string, string> = {
 export function deriveView(report: BurnoutReport): BurnoutView {
   const { timing, weeklyActivity } = report;
 
-  // A repository with no history is unknown, not unhealthy — scoring it "At
-  // Risk" off a zero would read as a verdict the data cannot support.
   const [health, healthColor] = report.empty ? ['No data', 'var(--soft)'] : healthOf(report.sustainabilityScore);
 
   const list: ContributorData[] = report.contributors.map((c) => {
@@ -149,8 +133,6 @@ export function deriveView(report: BurnoutReport): BurnoutView {
   const concColor = conc > 20 ? "var(--bad)" : conc > 13 ? "var(--warn)" : "var(--good)";
   const topContributor = report.contributors[0]?.username ?? "—";
 
-  // The report's own dependency verdict drives the copy, so the badge and the
-  // paragraph below it can never disagree.
   const busLevel = report.dependencyRisk === "High" ? "Elevated" : report.dependencyRisk === "Medium" ? "Moderate" : "Low";
   const busColor = report.dependencyRisk === "High" ? "var(--bad)" : report.dependencyRisk === "Medium" ? "var(--warn)" : "var(--good)";
   const busNote =

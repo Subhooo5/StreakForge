@@ -5,20 +5,11 @@ interface BotToggleProps {
   onChange: (next: boolean) => void;
   label: string;
   hint?: string;
-  /** Rendered when the analysis knows how many bot accounts it found. */
   filteredCount?: number;
   disabled?: boolean;
   id: string;
 }
 
-/**
- * Switch for excluding automated bot and dependency accounts.
- *
- * Both instances on the page — the one above the search box and the one over
- * the results — drive the same state and the same re-analysis, because the
- * filter changes the commit totals every figure is derived from rather than
- * merely hiding rows.
- */
 export default function BotToggle({ checked, onChange, label, hint, filteredCount, disabled, id }: BotToggleProps) {
   return (
     <label

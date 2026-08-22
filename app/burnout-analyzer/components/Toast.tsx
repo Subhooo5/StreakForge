@@ -5,11 +5,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export interface ToastState {
   message: string;
   tone: 'ok' | 'bad';
-  /** Bumped per call so repeat messages still restart the timer. */
   nonce: number;
 }
 
-/** Fire-and-forget toast state, auto-dismissing after `ms`. */
 export function useToast(ms = 2600): [ToastState | null, (message: string, tone?: 'ok' | 'bad') => void] {
   const [toast, setToast] = useState<ToastState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,12 +28,6 @@ export function useToast(ms = 2600): [ToastState | null, (message: string, tone?
   return [toast, show];
 }
 
-/**
- * Fixed-position confirmation for export actions.
- *
- * Fixed rather than in-flow so surfacing one never moves the page — the same
- * rule the rest of this page follows.
- */
 export default function Toast({ toast }: { toast: ToastState | null }) {
   const accent = toast?.tone === 'bad' ? 'var(--bad)' : 'var(--good)';
   return (

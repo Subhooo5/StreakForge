@@ -1,16 +1,8 @@
 interface AdviceRowProps {
   text: string;
-  /** `true` only when a language model actually produced this line. */
   ai: boolean;
 }
 
-/**
- * One line of maintenance advice.
- *
- * The AI badge appears only when a model genuinely generated the text. With no
- * model configured the panel renders the heuristic lines alone and carries no
- * badge at all, rather than implying an engine that never ran.
- */
 export default function AdviceRow({ text, ai }: AdviceRowProps) {
   const accent = ai ? 'var(--accent-ink)' : 'var(--soft)';
   return (

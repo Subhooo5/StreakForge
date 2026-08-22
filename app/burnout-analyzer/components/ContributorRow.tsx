@@ -4,9 +4,7 @@ import Avatar from '@/components/Avatar';
 interface ContributorRowProps {
   handle: string;
   initial: string;
-  /** Deterministic gradient, shown until (or instead of) the real avatar. */
   avatar: string;
-  /** Real GitHub avatar, layered over the gradient fallback. */
   avatarUrl?: string;
   commitsStr: string;
   shareStr: string;

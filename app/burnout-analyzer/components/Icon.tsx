@@ -1,9 +1,3 @@
-/**
- * The Burnout Radar icon set, shared by the page and its cards.
- *
- * Kept as bare path data so every icon inherits stroke colour from its call
- * site and no icon library enters the bundle.
- */
 export const ICO_PATHS: Record<string, string> = {
   bus: 'M3 6.5 8 2l5 4.5M4 6v6h8V6M6.5 12V9h3v3',
   conc: 'M8 2v6l4 2M8 8 4 10',

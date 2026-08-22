@@ -4,24 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ScrollPaneProps {
   children: React.ReactNode;
-  /**
-   * Hard cap past which content scrolls instead of growing the card. Omit
-   * inside a stretched flex column, where the pane fills whatever height the
-   * taller card in the pair established.
-   */
   maxHeight?: number;
   className?: string;
 }
 
-/**
- * Contained vertical scroll for a card whose content can outgrow its pair.
- *
- * The paired cards are made equal-height by the grid itself (default `stretch`),
- * so this never sets a fixed height — a data-light repository leaves both cards
- * short and equal with no empty box, and only a repository whose content passes
- * `maxHeight` starts scrolling. The bottom fade appears solely while there is
- * more to reveal, so it never sits under content that has already ended.
- */
 export default function ScrollPane({ children, maxHeight, className }: ScrollPaneProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
@@ -39,8 +25,6 @@ export default function ScrollPane({ children, maxHeight, className }: ScrollPan
     const el = ref.current;
     if (!el) return;
     measure();
-    // Content and the card's own height both change as data loads and as the
-    // paired card grows, so watch the element rather than a single event.
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     for (const child of Array.from(el.children)) ro.observe(child);

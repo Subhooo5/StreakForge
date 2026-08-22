@@ -1,23 +1,11 @@
 interface RiskGaugeProps {
-  /** 0–100 weighted burnout-risk score. */
   score: number;
-  /** Token colour for the current band. */
   color: string;
 }
 
-/**
- * Semicircular gauge for the weighted burnout-risk score.
- *
- * Deliberately a different instrument from the Sustainability `ScoreRing` in
- * the page header: that one reads "how healthy is this repository" and fills
- * clockwise as it improves, this one reads "how much burnout signal is there"
- * and sweeps left-to-right through the Low / Moderate / High bands, so a high
- * needle is unambiguously bad.
- */
 export default function RiskGauge({ score, color }: RiskGaugeProps) {
   const clamped = Math.max(0, Math.min(100, score));
 
-  // Semicircle from 180° (left) to 0° (right), radius 70 about (90, 90).
   const R = 70;
   const CX = 90;
   const CY = 90;
@@ -33,19 +21,18 @@ export default function RiskGauge({ score, color }: RiskGaugeProps) {
     return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
   };
 
-  // Needle stops just short of the arc so it reads as an indicator, not a spoke.
   const needleAngle = Math.PI - (clamped / 100) * Math.PI;
   const nx = CX + (R - 14) * Math.cos(needleAngle);
   const ny = CY - (R - 14) * Math.sin(needleAngle);
 
   return (
     <svg viewBox="0 0 180 116" width="100%" height="100%" style={{ display: 'block', maxWidth: '260px' }} role="img" aria-label={`Burnout risk score ${clamped} out of 100`}>
-      {/* Band track — the three thresholds the score is read against. */}
+      {}
       <path d={arc(0, 30)} fill="none" stroke="var(--good)" strokeWidth={9} strokeLinecap="round" opacity={0.28} />
       <path d={arc(31, 70)} fill="none" stroke="var(--warn)" strokeWidth={9} strokeLinecap="round" opacity={0.28} />
       <path d={arc(71, 100)} fill="none" stroke="var(--bad)" strokeWidth={9} strokeLinecap="round" opacity={0.28} />
 
-      {/* Filled sweep up to the score. */}
+      {}
       <path d={arc(0, Math.max(0.5, clamped))} fill="none" stroke={color} strokeWidth={9} strokeLinecap="round" />
 
       <line x1={CX} y1={CY} x2={nx.toFixed(2)} y2={ny.toFixed(2)} stroke={color} strokeWidth={2.6} strokeLinecap="round" />

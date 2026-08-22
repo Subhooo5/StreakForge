@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { BurnoutReport } from "@/types/burnout";
 
-/** One analysis request in flight or already resolved. */
 export interface BurnoutState {
   data: BurnoutReport | null;
   loading: boolean;
@@ -21,15 +20,6 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return (await res.json()) as T;
 }
 
-/**
- * Session-lifetime memo of resolved analyses, so re-toggling the bot filter or
- * navigating Back and Forward re-renders from memory instead of paying for a
- * second round trip. The route caches on the server for an hour as well; this
- * only removes the network hop.
- *
- * Keyed on the bot-exclusion flag too, because the two variants are different
- * analyses rather than different views of one.
- */
 const reportCache = new Map<string, Promise<BurnoutReport>>();
 
 const cacheKey = (owner: string, repo: string, excludeBots: boolean) =>
@@ -42,7 +32,6 @@ function loadReport(owner: string, repo: string, excludeBots: boolean): Promise<
 
   const query = `owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&excludeBots=${excludeBots}`;
   const promise = getJson<BurnoutReport>(`/api/burnout?${query}`).catch((err: unknown) => {
-    // A failure must not poison the cache — the next attempt should retry.
     reportCache.delete(key);
     throw err;
   });
@@ -52,27 +41,14 @@ function loadReport(owner: string, repo: string, excludeBots: boolean): Promise<
 }
 
 export interface Burnout extends BurnoutState {
-  /** Runs an analysis and stores the result. */
   run: (owner: string, repo: string, excludeBots: boolean) => Promise<void>;
-  /** Re-runs against GitHub, bypassing both caches. */
   refresh: () => Promise<void>;
-  /** Warms the cache without touching the rendered state. */
   prefetch: (owner: string, repo: string, excludeBots: boolean) => void;
-  /** Returns to the pre-analysis state. */
   reset: () => void;
 }
 
-/**
- * Data layer for the Burnout Radar page.
- *
- * Every figure the page renders comes from `/api/burnout`, which derives it
- * from GitHub's repository statistics endpoints. There is no seeded fallback:
- * a repository with no history resolves to a report flagged `empty`, which the
- * page renders as an empty state.
- */
 export function useBurnout(): Burnout {
   const [state, setState] = useState<BurnoutState>(IDLE);
-  // Guards against a slow earlier request overwriting a newer one.
   const currentRef = useRef<string | null>(null);
   const lastArgsRef = useRef<{ owner: string; repo: string; excludeBots: boolean } | null>(null);
 
@@ -137,7 +113,6 @@ export function useBurnout(): Burnout {
   return { ...state, run, refresh, prefetch, reset };
 }
 
-/** Splits a `owner/repo` string, tolerating a full GitHub URL or a trailing slash. */
 export function parseRepoInput(raw: string): { owner: string; repo: string } | null {
   let value = raw.trim();
   if (!value) return null;

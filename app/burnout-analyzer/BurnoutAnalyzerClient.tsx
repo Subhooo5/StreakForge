@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useUrlParams } from '@/hooks/useUrlParams';
-import { useBurnout, parseRepoInput } from './data/useBurnout';
+import { useBurnout, parseRepoInput } from './hooks/useBurnout';
 import { deriveView } from './data/deriveView';
 import ScoreRing from './components/ScoreRing';
 import ContributorRow from './components/ContributorRow';
@@ -20,8 +20,6 @@ import LoadingPanel from '@/components/LoadingPanel';
 import { classifyFailure } from '@/utils/emptyState';
 import { buildJson, buildMarkdown, buildPdf, buildShareLink, copyText, downloadBlob, reportFileBase } from './utils/report';
 
-// Reproduces the mockup's `style-hover="..."` behaviour with React hover state.
-// `base` styles stay verbatim; `hover` styles are merged on pointer-enter.
 type HoverProps = React.HTMLAttributes<HTMLElement> & {
   as?: React.ElementType;
   base?: React.CSSProperties;
@@ -42,13 +40,10 @@ function Hover({ as = 'div', base, hover, children, ...rest }: HoverProps) {
   );
 }
 
-// ─── constants ───────────────────────────────────────────────────────────────
 const DEMOS = ['facebook/react', 'vercel/next.js', 'Subhooo5/streakforge'];
 
-/** Query params this route owns: `/burnout-analyzer?owner=X&repo=Y`. */
 const BURNOUT_PARAMS = ['owner', 'repo'];
 
-// ─── logo SVGs ───────────────────────────────────────────────────────────────
 function Logo() {
   return (
     <svg viewBox="0 0 545 150" xmlns="http://www.w3.org/2000/svg" style={{ height: '41px', width: '150px', display: 'block' }}>
@@ -89,30 +84,16 @@ function FooterLogo() {
   );
 }
 
-// ─── main component ───────────────────────────────────────────────────────────
 export default function BurnoutAnalyzerClient() {
   const [theme, toggleTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [repoInput, setRepoInput] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
 
-  /**
-   * Shared by both bot switches — the one under the search box and the one over
-   * the results. It is a single piece of state because the filter is not a view
-   * option: it changes the commit totals every figure is derived from, so
-   * flipping it re-runs the analysis on the server.
-   *
-   * It stays out of the URL deliberately. `/burnout-analyzer?owner=X&repo=Y`
-   * addresses a repository, and Back should leave the results rather than undo
-   * a switch.
-   */
   const [excludeBots, setExcludeBots] = useState(false);
   const [toast, showToast] = useToast();
   const [exporting, setExporting] = useState<ExportAction | null>(null);
 
-  // A shared link carries the filter it was taken under, so opening one shows
-  // the same numbers the sender saw. Read once on mount; toggling afterwards
-  // deliberately does not rewrite the URL.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('excludeBots') === 'true') setExcludeBots(true);
   }, []);
@@ -125,11 +106,6 @@ export default function BurnoutAnalyzerClient() {
 
   const burnout = useBurnout();
 
-  // ── URL is the source of truth for the analysis ────────────────────────────
-  // `/burnout-analyzer` is the search screen; `/burnout-analyzer?owner=X&repo=Y`
-  // is that repository's report. Analysing pushes the params and the effect
-  // below performs the fetch, so deep links, refresh, Back and Forward all take
-  // one path — and Back from a report lands on a clean search screen.
   const [urlParams, writeUrl] = useUrlParams(BURNOUT_PARAMS);
   const urlOwner = urlParams.owner ?? '';
   const urlRepo = urlParams.repo ?? '';
@@ -142,8 +118,6 @@ export default function BurnoutAnalyzerClient() {
 
   useEffect(() => {
     if (!urlOwner || !urlRepo) {
-      // Back out of a report → the search screen must look exactly like a first
-      // load, so the input and its error clear too.
       lastRunRef.current = null;
       burnoutResetRef.current();
       setRepoInput('');
@@ -161,7 +135,6 @@ export default function BurnoutAnalyzerClient() {
   const view = useMemo(() => (burnout.data ? deriveView(burnout.data) : null), [burnout.data]);
   const analyzed = burnout.data !== null || burnout.loading || burnout.error !== null;
 
-  // ── actions ──
   const startAnalysis = useCallback(
     (raw: string) => {
       const parsed = parseRepoInput(raw);
@@ -170,8 +143,6 @@ export default function BurnoutAnalyzerClient() {
         return;
       }
       setInputError(null);
-      // Push the params; the URL effect performs the fetch, so Back returns to
-      // the search screen and the link is shareable.
       writeUrl({ owner: parsed.owner, repo: parsed.repo }, 'push');
     },
     [writeUrl],
@@ -185,20 +156,13 @@ export default function BurnoutAnalyzerClient() {
     writeUrl({ owner: '', repo: '' }, 'push');
   }
 
-  /** Flipping the filter re-runs the analysis; it never merely hides rows. */
   const onToggleBots = useCallback(
     (next: boolean) => {
       setExcludeBots(next);
-      // The URL effect re-runs whenever this changes, because the flag is part
-      // of its guard key. Nothing else to do here.
     },
     [],
   );
 
-  /**
-   * Every export reads the report currently on screen, so the file always
-   * matches the active filter rather than an unfiltered default.
-   */
   async function onExport(action: ExportAction) {
     const report = burnout.data;
     if (!report || !view) return;
@@ -237,7 +201,6 @@ export default function BurnoutAnalyzerClient() {
     }
   }
 
-  // ── reveal ──
   const runReveal = useCallback(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -262,7 +225,6 @@ export default function BurnoutAnalyzerClient() {
   const runRevealRef = useRef(runReveal);
   runRevealRef.current = runReveal;
 
-  // ── canvas grid (mount only) ──
   useEffect(() => {
     const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const canvas = gridRef.current;
@@ -333,12 +295,8 @@ export default function BurnoutAnalyzerClient() {
     };
   }, []);
 
-  // ── update grid colors on theme change ──
   useEffect(() => { readGridColorsRef.current?.(); }, [theme]);
 
-  // `runReveal` only observes the elements present when it runs, so the
-  // sections that swap in when a report arrives mount at `[data-reveal]`'s
-  // opacity 0 with nobody left to add `.in`. Re-run on every swap, both ways.
   useEffect(() => {
     const id = requestAnimationFrame(() => runRevealRef.current?.());
     return () => cancelAnimationFrame(id);
@@ -357,7 +315,7 @@ export default function BurnoutAnalyzerClient() {
 
       <div style={{ position: 'relative', zIndex: 2 }}>
 
-        {/* TICKER */}
+        {}
         <div style={{ width: '100%', borderBottom: '1px solid var(--line2)', background: 'var(--surface)', backdropFilter: 'blur(10px)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', height: '34px', width: 'max-content', animation: 'sf-ticker 46s linear infinite' }}>
             {[0, 1].map(dup => (
@@ -374,7 +332,7 @@ export default function BurnoutAnalyzerClient() {
           </div>
         </div>
 
-        {/* NAV */}
+        {}
         <header style={{ position: 'sticky', top: 0, zIndex: 40 }}>
           <div style={{ background: 'var(--surface)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--line2)' }}>
             <nav style={{ maxWidth: '1240px', margin: '0 auto', padding: '14px clamp(16px,4vw,40px)', display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -414,7 +372,7 @@ export default function BurnoutAnalyzerClient() {
 
         <main id="top">
 
-          {/* A — INPUT SCREEN */}
+          {}
           {!analyzed && (
             <section style={{ maxWidth: '760px', margin: '0 auto', padding: 'clamp(50px,8vw,96px) clamp(16px,4vw,40px) clamp(40px,6vw,72px)', textAlign: 'center' }}>
               <div className="ui" data-reveal style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', padding: '7px 16px', border: '1px solid color-mix(in srgb,var(--accent) 35%,var(--line))', borderRadius: '100px', background: 'color-mix(in srgb,var(--accent) 8%,var(--surface))', fontSize: '12px', letterSpacing: '.14em', color: 'var(--accent-ink)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -476,11 +434,11 @@ export default function BurnoutAnalyzerClient() {
             </section>
           )}
 
-          {/* B — RESULTS SCREEN */}
+          {}
           {analyzed && (
             <section style={{ maxWidth: '1240px', margin: '0 auto', padding: 'clamp(24px,4vw,44px) clamp(16px,4vw,40px) clamp(20px,3vw,30px)' }}>
 
-              {/* header card */}
+              {}
               <div data-reveal style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '24px', padding: 'clamp(20px,3vw,32px)', boxShadow: 'var(--shadow)' }}>
                 <Hover as="button" onClick={onBack} className="ui" base={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13.5px', fontWeight: 500, color: 'var(--soft)', transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>
                   <svg width={15} height={15} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6}><path d="M10 3 5 8l5 5" /></svg>Back to search
@@ -522,8 +480,7 @@ export default function BurnoutAnalyzerClient() {
                   </div>
                 </div>
 
-                {/* Same state as the search screen's switch — flipping it re-runs
-                    the analysis rather than hiding rows from a cached one. */}
+                {}
                 <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--line2)' }}>
                   <BotToggle
                     id="bot-toggle-results"
@@ -537,7 +494,7 @@ export default function BurnoutAnalyzerClient() {
                 </div>
               </div>
 
-              {/* loading */}
+              {}
               {burnout.loading && !view && (
                 <div data-reveal style={{ marginTop: '18px' }}>
                   <LoadingPanel
@@ -547,9 +504,7 @@ export default function BurnoutAnalyzerClient() {
                 </div>
               )}
 
-              {/* error — routed through the shared classifier so a missing,
-                  private or rate-limited repository each reads correctly
-                  instead of all collapsing into one generic failure. */}
+              {}
               {burnout.error && !burnout.loading && (() => {
                 const state = classifyFailure(burnout.error, `${urlOwner}/${urlRepo}`);
                 const tone = state.tone === 'bad' ? 'var(--bad)' : 'var(--warn)';
@@ -564,7 +519,7 @@ export default function BurnoutAnalyzerClient() {
                 );
               })()}
 
-              {/* empty repository — GitHub published no contributor statistics */}
+              {}
               {view?.empty && (
                 <div data-reveal style={{ marginTop: '18px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(24px,4vw,36px)' }}>
                   <div className="ui" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700, color: 'var(--warn)' }}>
@@ -582,10 +537,7 @@ export default function BurnoutAnalyzerClient() {
                 </div>
               )}
 
-              {/* A re-fetch (bot toggle, refresh) keeps every section mounted at
-                  its current size and shows progress as an overlay inside it.
-                  Swapping the block out for a loading panel is what used to
-                  collapse the page and move everything below it. */}
+              {}
               {view && !view.empty && (
                 <div style={{ position: 'relative' }} aria-busy={burnout.loading || undefined}>
                   {burnout.loading && (
@@ -602,10 +554,9 @@ export default function BurnoutAnalyzerClient() {
                     </div>
                   )}
 
-                  {/* dependency + contributor table */}
+                  {}
                   <div className="dep-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,1fr) 2.3fr', gap: '18px', marginTop: '18px', alignItems: 'start' }}>
-                    {/* `alignItems: start` on the grid keeps this card at its natural
-                        height instead of stretching to match the contributor table. */}
+                    {}
                     <div data-reveal style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(20px,2.6vw,28px)' }}>
                       <div className="ui" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700 }}>
                         <span style={{ width: '24px', height: '24px', borderRadius: '8px', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb,var(--good) 16%,transparent)', color: 'var(--good)' }}><svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 8.5 6.5 12 13 4" /></svg></span>
@@ -649,8 +600,7 @@ export default function BurnoutAnalyzerClient() {
                     </div>
                   </div>
 
-                  {/* timing + indicators — paired, equal height (grid `stretch`),
-                      each card scrolling inside itself past the shared height. */}
+                  {}
                   <div className="dep-grid" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '18px', marginTop: '18px' }}>
                     <div data-reveal style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(20px,2.6vw,28px)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                       <div className="ui" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700, flex: 'none' }}>
@@ -701,7 +651,7 @@ export default function BurnoutAnalyzerClient() {
                     </div>
                   </div>
 
-                  {/* activity breakdown */}
+                  {}
                   <div data-reveal style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(20px,2.6vw,28px)', marginTop: '18px' }}>
                     <div className="ui" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '13px', letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -720,8 +670,7 @@ export default function BurnoutAnalyzerClient() {
                     </div>
                   </div>
 
-                  {/* risk assessment + advice — paired, equal height, each
-                      scrolling inside itself past the shared height. */}
+                  {}
                   <div className="dep-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '18px', marginTop: '18px' }}>
                     <div data-reveal style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: '22px', padding: 'clamp(20px,2.6vw,28px)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                       <div className="ui" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700, flex: 'none' }}>
@@ -750,10 +699,7 @@ export default function BurnoutAnalyzerClient() {
                         <Icon name="spark" color="var(--accent-ink)" size={16} />
                         AI &amp; Heuristic Recommendations
                       </div>
-                      {/* Capped so the advice list can never drive the row
-                          height: the recommendation count changes with the bot
-                          filter, and without this the pair resized on every
-                          toggle and shifted the section below it. */}
+                      {}
                       <ScrollPane maxHeight={300}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
                           {view.advice.map(a => (
@@ -764,7 +710,7 @@ export default function BurnoutAnalyzerClient() {
                     </div>
                   </div>
 
-                  {/* recommendations */}
+                  {}
                   <div data-reveal style={{ marginTop: '18px' }}>
                     <div className="ui" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '16px' }}>
                       <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="var(--good)" strokeWidth={1.6}><path d="M8 1.5a4.5 4.5 0 0 0-2.5 8.3V12h5v-2.2A4.5 4.5 0 0 0 8 1.5ZM6 14h4M6.5 12v2M9.5 12v2" /></svg>
@@ -782,7 +728,7 @@ export default function BurnoutAnalyzerClient() {
             </section>
           )}
 
-          {/* FOOTER */}
+          {}
           <footer className="ui" style={{ maxWidth: '1180px', margin: '0 auto', padding: 'clamp(34px,5vw,64px) clamp(16px,4vw,40px) 40px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: '30px' }}>
               <div style={{ minWidth: '180px' }}>
