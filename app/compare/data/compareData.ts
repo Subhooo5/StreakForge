@@ -1,17 +1,5 @@
-// View-model layer for the Compare page.
-//
-// Everything here maps the REAL payload from `/api/compare` onto the shape the
-// ported markup already consumes. The page's original seeded generators
-// (`hash`/`mulberry`/`buildProfile`) are gone — no figure on this page is
-// invented any more.
-//
-// Only two things are still deterministic-from-login, and neither is a
-// statistic: the gradient that sits behind an avatar while the real image
-// loads, and nothing else.
-
 import type { CompareActivityPayload, CompareLanguagePayload, CompareUserPayload } from "@/types/compare";
 
-/** FNV-1a — seeds the placeholder gradient behind a loading avatar only. */
 export function hash(s: string): number {
   s = s || "streakforge";
   let h = 2166136261;
@@ -22,14 +10,12 @@ export function hash(s: string): number {
   return Math.abs(h) >>> 0;
 }
 
-/** Placeholder gradient shown behind an avatar until the image resolves. */
 export function avatarFor(seed: number): string {
   const h1 = seed % 360,
     h2 = (seed * 7) % 360;
   return `linear-gradient(135deg,hsl(${h1} 70% 55%),hsl(${h2} 72% 42%))`;
 }
 
-/** Persona badge shown on a profile card, and its icon key in ProfileCard. */
 export interface Persona {
   name: string;
   key: string;
@@ -41,9 +27,7 @@ export interface CompareProfile {
   handleUpper: string;
   name: string;
   initial: string;
-  /** Real GitHub avatar. */
   avatarUrl: string;
-  /** Gradient shown behind {@link avatarUrl} while it loads. */
   avatar: string;
   persona: string;
   personaKey: string;
@@ -70,13 +54,6 @@ export interface CompareProfile {
   activity: CompareActivityPayload[];
 }
 
-/**
- * Persona derived from the developer's real figures.
- *
- * Ordered most-specific first, so a single developer resolves to exactly one
- * badge: sustained output, then reach, then collaboration, then consistency,
- * with the low-volume case last.
- */
 export function derivePersona(user: CompareUserPayload): Persona {
   const { stats, profile } = user;
 
@@ -87,7 +64,6 @@ export function derivePersona(user: CompareUserPayload): Persona {
   return { name: "Weekend Warrior", key: "moon" };
 }
 
-/** Map one side of the `/api/compare` payload onto the view model. */
 export function buildProfile(user: CompareUserPayload): CompareProfile {
   const { profile, stats, languages, activity } = user;
   const login = profile.username;
@@ -127,15 +103,8 @@ export function buildProfile(user: CompareUserPayload): CompareProfile {
   };
 }
 
-/**
- * The five radar axes, each normalised against the higher of the two
- * developers so the chart reads as a head-to-head rather than an absolute
- * scale. Returns values in 0…1, the range the chart's polygon builder wants.
- */
 export function deriveRadar(a: CompareUserPayload, b: CompareUserPayload): [number[], number[]] {
   const raw = (u: CompareUserPayload) => [
-    // Volume is contribution count alone — lines-of-code is no longer a
-    // StreakForge feature line, so nothing user-facing derives from it.
     u.stats.totalContributions,
     u.stats.currentStreak * 2 + u.stats.peakStreak,
     u.profile.stats.stars * 3 + u.profile.stats.followers,
@@ -151,10 +120,6 @@ export function deriveRadar(a: CompareUserPayload, b: CompareUserPayload): [numb
   return [normalise(rawA), normalise(rawB)];
 }
 
-/**
- * Winner of the showdown: whoever takes more of the six head-to-head metrics.
- * `null` means an even split, which the banner renders as a dead heat.
- */
 export function deriveWinner(a: CompareProfile, b: CompareProfile): CompareProfile | null {
   const battles: [number, number][] = [
     [a.contrib, b.contrib],

@@ -4,15 +4,8 @@ import CompareClient from "./CompareClient";
 const BASE_TITLE = "Compare — StreakForge";
 const BASE_DESCRIPTION = "Compare GitHub contribution streaks side by side.";
 
-/** Loose sanity check before echoing a param into page metadata. */
 const HANDLE = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
 
-/**
- * `/compare` is the battleground; `/compare?user1=X&user2=Y` is one showdown.
- * A shared link therefore carries the matchup in its title and description.
- *
- * Next 16: `searchParams` is async and must be awaited.
- */
 export async function generateMetadata({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<Metadata> {
   const params = await searchParams;
   const read = (key: string) => {

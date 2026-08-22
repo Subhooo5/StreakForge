@@ -4,10 +4,8 @@ interface TrendCardProps {
   b: string;
   sub: string;
   hotColor: string;
-  /** True for the pairings with the most recorded head-to-head battles. */
   hot: boolean;
   go: () => void;
-  /** Warms this matchup on hover so the click lands on a resolved result. */
   warm: () => void;
 }
 

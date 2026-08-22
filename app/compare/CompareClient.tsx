@@ -13,11 +13,9 @@ import LangRow from "./components/LangRow";
 import LegendCard from "./components/LegendCard";
 import TrendCard from "./components/TrendCard";
 import { avatarFor, buildProfile, deriveRadar, deriveWinner, hash } from "./data/compareData";
-import { compareBadgeSrc, useArena, useBattle } from "./data/useCompare";
+import { compareBadgeSrc, useArena, useBattle } from "./hooks/useCompare";
 import type { CompareActivityPayload } from "@/types/compare";
 
-// Reproduces the mockup's `style-hover="..."` behaviour with React hover state.
-// `base` styles stay verbatim; `hover` styles are merged on pointer-enter.
 type HoverProps = React.HTMLAttributes<HTMLElement> & {
   as?: React.ElementType;
   base?: React.CSSProperties;
@@ -38,22 +36,16 @@ function Hover({ as = "div", base, hover, children, ...rest }: HoverProps) {
 }
 
 const gridReactivity = 1.2;
-/** Query params this route owns: `/compare?user1=X&user2=Y`. */
 const COMPARE_PARAMS = ["user1", "user2"];
 
-/** One past matchup in the "Recent:" row. */
 interface RecentBattle {
   a: string;
   b: string;
 }
-/** Identity of a matchup, so re-running one moves it up instead of duplicating. */
 const recentBattleKey = (m: RecentBattle) => `${m.a}|${m.b}`;
-/** Guess the Developer advances to the next round after this many seconds. */
 const GUESS_SECONDS = 10;
-/** AI Showdown Predictions rotate on this interval. */
 const PREDICTION_MS = 7000;
 
-// ─── icon factory ───────────────────────────────────────────────────────────
 function ic(name: string, stroke = "currentColor") {
   const pp = { fill: "none" as const, stroke, strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   switch (name) {
@@ -135,7 +127,6 @@ function ic(name: string, stroke = "currentColor") {
   }
 }
 
-// ─── theme icon ─────────────────────────────────────────────────────────────
 function ThemeIcon({ theme }: { theme: "light" | "dark" }) {
   if (theme === "dark") {
     return (
@@ -152,11 +143,6 @@ function ThemeIcon({ theme }: { theme: "light" | "dark" }) {
   );
 }
 
-// ─── radar SVG ───────────────────────────────────────────────────────────────
-// Horizontal nudge per axis label, in viewBox units. The two side axes sit
-// closest to the plotted shape, so "Consistency" is pushed right and
-// "Versatility" left to clear it. Position only — font, size and colour are
-// untouched, and the chart's data and geometry are unaffected.
 const LABEL_NUDGE_X: Record<number, number> = { 1: 12, 4: -12 };
 
 function RadarChart({ a, b }: { a: number[]; b: number[] }) {
@@ -199,27 +185,10 @@ function RadarChart({ a, b }: { a: number[]; b: number[] }) {
   );
 }
 
-// ─── heatmap ────────────────────────────────────────────────────────────────
-/**
- * GitHub's real contribution graph for the trailing 13 weeks.
- *
- * 7 rows (Sun→Sat) × 13 columns (calendar weeks), column-major, with leading
- * blanks so the first column starts on the correct weekday — the same shape
- * github.com/<user> renders.
- *
- * The five-step green scale is GitHub's own, and is a deliberate, scoped
- * exception to the "colours come only from the defined CSS variables" rule:
- * this graph is meant to read as GitHub's, not as StreakForge's accent. See
- * CLAUDE.md → DESIGN SYSTEM.
- */
 const GH_SCALE_LIGHT = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"];
 const GH_SCALE_DARK = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"];
-/** A full contribution year, the same 53 columns github.com/<user> renders. */
 const WEEKS = 53;
 
-// The year-wide grid is wider than its card, so it scrolls horizontally
-// exactly like GitHub's own graph rather than being squeezed or cropped.
-// `minWidth: max-content` stops the grid collapsing to the scroll container.
 function HeatMap({ activity, dark }: { activity: CompareActivityPayload[]; dark: boolean }) {
   const scale = dark ? GH_SCALE_DARK : GH_SCALE_LIGHT;
   const grid = buildHeatmapGrid(activity, WEEKS);
@@ -230,14 +199,12 @@ function HeatMap({ activity, dark }: { activity: CompareActivityPayload[]; dark:
   );
 }
 
-// ─── derived comparison data ─────────────────────────────────────────────────
 function barFor(av: number, bv: number): [number, number, boolean] {
   const t = av + bv || 1;
   const ap = Math.round((av / t) * 100);
   return [ap, 100 - ap, av >= bv];
 }
 
-// ─── logo SVG (verbatim from mockup) ─────────────────────────────────────────
 function Logo() {
   return (
     <svg viewBox="0 0 545 150" xmlns="http://www.w3.org/2000/svg" style={{ height: "41px", width: "150px", display: "block" }}>
@@ -294,7 +261,6 @@ function FooterLogo() {
   );
 }
 
-// ─── main component ──────────────────────────────────────────────────────────
 export default function CompareClient() {
   const [theme, toggleTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -305,9 +271,6 @@ export default function CompareClient() {
   const [guessCountdown, setGuessCountdown] = useState(GUESS_SECONDS);
   const [guessPaused, setGuessPaused] = useState(false);
   const [predIndex, setPredIndex] = useState(0);
-  // Marquees carry their animation inline, which outranks the stylesheet's
-  // `.marq:hover .marq-track { animation-play-state: paused }` — so the pause
-  // is driven from React state instead.
   const [showdownPaused, setShowdownPaused] = useState(false);
   const [famePaused, setFamePaused] = useState(false);
 
@@ -318,7 +281,6 @@ export default function CompareClient() {
   const readGridColorsRef = useRef<(() => void) | null>(null);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── initGrid + initReveal ───────────────────────────────────────────────
   useEffect(() => {
     reduceRef.current = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const canvas = gridRef.current;
@@ -429,7 +391,6 @@ export default function CompareClient() {
       raf = requestAnimationFrame(draw);
     }
 
-    // initReveal
     const root = rootRef.current;
     if (!root) return;
     const els = [...root.querySelectorAll<HTMLElement>("[data-reveal]")];
@@ -482,12 +443,10 @@ export default function CompareClient() {
     };
   }, []);
 
-  // re-read grid colors after theme flip
   useEffect(() => {
     readGridColorsRef.current?.();
   }, [theme]);
 
-  // re-run reveal after comparison results appear
   const runReveal = () => {
     const root = rootRef.current;
     if (!root) return;
@@ -523,13 +482,7 @@ export default function CompareClient() {
   const runRevealRef = useRef(runReveal);
   runRevealRef.current = runReveal;
 
-  // ── live data ───────────────────────────────────────────────────────────
-  // Everything below is real GitHub data from the compare routes. `battle`
-  // holds the head-to-head; `arena` holds the pre-comparison battleground and
-  // is reloaded after each battle so the counters and HOT tallies stay live.
   const arena = useArena();
-  // Past matchups, persisted client-side via the shared recent-list hook —
-  // the same mechanism Home uses for its recent searches.
   const { recent: recentBattles, remember: rememberBattle, clear: clearRecentBattles } = useRecentList<RecentBattle>("sf-recent-comparisons", recentBattleKey);
   const onBattleComplete = useCallback(() => {
     arena.reload();
@@ -541,11 +494,6 @@ export default function CompareClient() {
   }, [arena]);
   const battle = useBattle(onBattleComplete);
 
-  // ── URL is the source of truth for the comparison ───────────────────────
-  // `/compare` shows the battleground; `/compare?user1=X&user2=Y` shows the
-  // results for that pair. Starting a battle pushes the params and the effect
-  // below runs the fetch, so deep links, refresh, Back and Forward all take
-  // the same path — Back from a result lands on the bare battleground.
   const [urlParams, writeUrl] = useUrlParams(COMPARE_PARAMS);
   const urlUserA = urlParams.user1 ?? "";
   const urlUserB = urlParams.user2 ?? "";
@@ -557,8 +505,6 @@ export default function CompareClient() {
 
   useEffect(() => {
     if (!urlUserA || !urlUserB) {
-      // Back out of a result → the battleground must look exactly like a first
-      // load, so the inputs and the guessing game's opened state reset too.
       lastRunRef.current = null;
       battleResetRef.current();
       setUserA("");
@@ -576,23 +522,16 @@ export default function CompareClient() {
 
   const compared = battle.data !== null || (battle.loading && !!urlUserA && !!urlUserB);
 
-  // `initReveal` only observes the elements present at mount, so the sections
-  // that swap in when `compared` flips mount at `[data-reveal]`'s opacity 0
-  // with nobody left to add `.in` — which is what left the battleground blank
-  // after Back. Re-run the reveal on every swap, in both directions.
   useEffect(() => {
     const id = requestAnimationFrame(() => runRevealRef.current?.());
     return () => cancelAnimationFrame(id);
   }, [compared]);
 
-  // Remember a matchup only once it has actually resolved, and store GitHub's
-  // canonical casing rather than whatever was typed.
   useEffect(() => {
     if (!battle.data) return;
     rememberBattle({ a: battle.data.user1.profile.username, b: battle.data.user2.profile.username });
   }, [battle.data, rememberBattle]);
 
-  // ── derived data ────────────────────────────────────────────────────────
   const a = battle.data ? buildProfile(battle.data.user1) : null;
   const b = battle.data ? buildProfile(battle.data.user2) : null;
   const winner = a && b ? deriveWinner(a, b) : null;
@@ -618,8 +557,6 @@ export default function CompareClient() {
         })
       : [];
 
-  // Union of both developers' real language breakdowns, most-used first. The
-  // colours are GitHub's own, carried through by the API.
   const langRows =
     a && b
       ? (() => {
@@ -640,7 +577,6 @@ export default function CompareClient() {
         })()
       : [];
 
-  // Curated colour per showdown card (design), real pairings + HOT/order (data).
   const HOT_COLORS = ["#e0567a", "#d9a323", "#e0567a", "#e0567a", "#a855f7", "#d9a323"];
   const trend = (arena.data?.showdowns ?? []).map((s, i) => ({
     cat: s.cat,
@@ -664,11 +600,9 @@ export default function CompareClient() {
     avatar: avatarFor(hash(l.login.toLowerCase())),
   }));
 
-  // The top ticker teases the three busiest showdowns and the live counts.
   const tickerShowdowns = [0, 1, 2].map((i) => trend[i] ?? { a: "", b: "", sub: "" });
 
   const counters = arena.data?.counters;
-  /** No payload yet — the tiles show a skeleton instead of a misleading zero. */
   const countersPending = !arena.data && arena.loading;
   const STRIP_DEFS: [string, string, string, string][] = [
     [(counters?.developersCompared ?? 0).toLocaleString("en-US"), "Developers Compared", "users", "var(--accent-ink)"],
@@ -677,8 +611,6 @@ export default function CompareClient() {
     [(counters?.comparisonsToday ?? 0).toLocaleString("en-US"), "Comparisons Today", "fire", "var(--accent-ink)"],
   ];
 
-  // Guess the Developer autoplays to the next round every GUESS_SECONDS. It
-  // holds while the answer is on screen, and while the card is hovered.
   useEffect(() => {
     if (compared || guessRevealed || guessPaused) return;
     const id = setInterval(() => {
@@ -693,7 +625,6 @@ export default function CompareClient() {
     return () => clearInterval(id);
   }, [compared, guessRevealed, guessPaused]);
 
-  // AI Showdown Predictions cycle through the computed matchups.
   useEffect(() => {
     if (compared) return;
     const id = setInterval(() => setPredIndex((i) => i + 1), PREDICTION_MS);
@@ -708,21 +639,15 @@ export default function CompareClient() {
   const predictions = arena.data?.predictions ?? [];
   const pred = predictions.length ? predictions[predIndex % predictions.length] : null;
 
-  // ── handlers ────────────────────────────────────────────────────────────
-  // Every "start a battle" affordance on this page — the Compare button, a
-  // trending card, a Walk of Fame card, the guessing game, the prediction
-  // panel — funnels through this one call.
   const doCompare = (ua: string, ub: string) => {
     const nextA = ua.trim() || userA.trim();
     const nextB = ub.trim() || userB.trim();
     setUserA(nextA);
     setUserB(nextB);
     if (!nextA || !nextB) {
-      void battle.run(nextA, nextB); // surfaces the "enter two usernames" error
+      void battle.run(nextA, nextB);
       return;
     }
-    // Push the params; the URL effect performs the fetch, so Back returns to
-    // the battleground and the link is shareable.
     writeUrl({ user1: nextA, user2: nextB }, "push");
   };
   const onCompare = () => doCompare(userA, userB);
@@ -751,7 +676,7 @@ export default function CompareClient() {
       <canvas ref={gridRef} style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2 }}>
-        {/* TICKER */}
+        {}
         <div className="marq" style={{ width: "100%", borderBottom: "1px solid var(--line2)", background: "var(--surface)", backdropFilter: "blur(10px)", overflow: "hidden" }}>
           <div className="marq-track" style={{ display: "flex", alignItems: "center", height: "34px", width: "max-content", animation: "sf-ticker 40s linear infinite" }}>
             {[0, 1].map((k) => (
@@ -783,7 +708,7 @@ export default function CompareClient() {
           </div>
         </div>
 
-        {/* NAV */}
+        {}
         <header style={{ position: "sticky", top: 0, zIndex: 40 }}>
           <div style={{ background: "var(--surface)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--line2)" }}>
             <nav style={{ maxWidth: "1240px", margin: "0 auto", padding: "14px clamp(16px,4vw,40px)", display: "flex", alignItems: "center", gap: "28px" }}>
@@ -844,7 +769,7 @@ export default function CompareClient() {
         </header>
 
         <main id="top">
-          {/* HERO */}
+          {}
           <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "clamp(44px,7vw,86px) clamp(16px,4vw,40px) clamp(24px,3vw,38px)", textAlign: "center" }}>
             <div className="ui" data-reveal style={{ display: "inline-flex", alignItems: "center", gap: "9px", padding: "7px 15px", border: "1px solid var(--line)", borderRadius: "100px", background: "var(--surface)", fontSize: "12px", letterSpacing: ".14em", color: "var(--soft)", textTransform: "uppercase", fontWeight: 600 }}>
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth={1.8}>
@@ -883,11 +808,8 @@ export default function CompareClient() {
                 {battle.loading ? "Comparing…" : "Compare"}
               </Hover>
             </div>
-            {/* Minimal error affordance for a failed lookup (unknown login,
-                rate limit, upstream timeout) — distinct from the idle state. */}
+            {}
             {battle.error && (() => {
-              // Shared classifier, so an unknown login, a private account and a
-              // rate limit each read correctly instead of one generic failure.
               const state = classifyFailure(battle.error, [userA, userB].filter(Boolean).join(" and ") || "those accounts");
               return (
                 <div className="ui" data-reveal role="alert" style={{ margin: "16px auto 0", maxWidth: "560px", padding: "11px 15px", borderRadius: "12px", border: "1px solid color-mix(in srgb,var(--bad) 45%,var(--line))", background: "color-mix(in srgb,var(--bad) 9%,transparent)", color: "var(--bad)", fontSize: "13.5px" }}>
@@ -902,8 +824,7 @@ export default function CompareClient() {
               </button>
             </div>
 
-            {/* Recent successful comparisons — persisted client-side
-                (localStorage), the same mechanism as Home's recent searches. */}
+            {}
             {recentBattles.length > 0 && (
               <div className="ui" style={{ maxWidth: "560px", margin: "8px auto 0", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
                 <span style={{ fontSize: "10.5px", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--faint)", fontWeight: 700, flex: "none" }}>Recent:</span>
@@ -919,8 +840,7 @@ export default function CompareClient() {
             )}
           </section>
 
-          {/* Shared loading panel — same spinner, container and copy pattern as
-              the Burnout Radar's, so a slow lookup reads the same everywhere. */}
+          {}
           {battle.loading && !a && !b && (
             <section style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(8px,2vw,20px) clamp(16px,4vw,40px) clamp(20px,3vw,30px)" }}>
               <LoadingPanel
@@ -930,10 +850,10 @@ export default function CompareClient() {
             </section>
           )}
 
-          {/* RESULTS */}
+          {}
           {compared && a && b && (
             <section ref={resultsRef} style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(8px,2vw,20px) clamp(16px,4vw,40px) clamp(20px,3vw,30px)", scrollMarginTop: "80px" }}>
-              {/* winner banner */}
+              {}
               <div data-reveal style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "11px", padding: "16px", borderRadius: "16px", border: "1px solid color-mix(in srgb,var(--accent) 45%,var(--line))", background: "color-mix(in srgb,var(--accent) 9%,var(--surface))", boxShadow: "0 14px 40px -22px var(--accent)" }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth={1.7}>
                   <path d="M7 4h10v3a5 5 0 0 1-10 0V4Z" />
@@ -942,7 +862,7 @@ export default function CompareClient() {
                 <span style={{ fontSize: "clamp(17px,2.4vw,22px)", fontWeight: 600, color: "var(--accent-ink)" }}>{winnerLine}</span>
               </div>
 
-              {/* profile cards */}
+              {}
               <div className="vs-stack" data-reveal style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", marginTop: "20px", position: "relative" }}>
                 <ProfileCard profile={a} palette="pa" />
                 <ProfileCard profile={b} palette="pb" />
@@ -951,7 +871,7 @@ export default function CompareClient() {
                 </div>
               </div>
 
-              {/* stats showdown */}
+              {}
               <div data-reveal style={{ marginTop: "clamp(30px,4vw,46px)" }}>
                 <div className="ui" style={{ fontSize: "12px", letterSpacing: ".14em", color: "var(--soft)", textTransform: "uppercase", fontWeight: 600, marginBottom: "16px" }}>
                   Stats Showdown
@@ -963,7 +883,7 @@ export default function CompareClient() {
                 </div>
               </div>
 
-              {/* skills radar */}
+              {}
               <div data-reveal style={{ marginTop: "clamp(30px,4vw,46px)" }}>
                 <div className="ui" style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", letterSpacing: ".14em", color: "var(--soft)", textTransform: "uppercase", fontWeight: 600, marginBottom: "16px" }}>
                   <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" strokeWidth={1.6}>
@@ -989,7 +909,7 @@ export default function CompareClient() {
                 </div>
               </div>
 
-              {/* language breakdown */}
+              {}
               <div data-reveal style={{ marginTop: "clamp(30px,4vw,46px)" }}>
                 <div className="ui" style={{ fontSize: "12px", letterSpacing: ".14em", color: "var(--soft)", textTransform: "uppercase", fontWeight: 600, marginBottom: "16px" }}>
                   Language Breakdown
@@ -1001,7 +921,7 @@ export default function CompareClient() {
                 </div>
               </div>
 
-              {/* activity heatmaps */}
+              {}
               <div data-reveal style={{ marginTop: "clamp(30px,4vw,46px)" }}>
                 <div className="vs-stack" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   {[a, b].map((p) => (
@@ -1017,7 +937,7 @@ export default function CompareClient() {
                 </div>
               </div>
 
-              {/* monolith comparison */}
+              {}
               <div data-reveal style={{ marginTop: "clamp(30px,4vw,46px)" }}>
                 <div className="ui" style={{ fontSize: "12px", letterSpacing: ".14em", color: "var(--soft)", textTransform: "uppercase", fontWeight: 600, marginBottom: "16px" }}>
                   3D Monolith Comparison
@@ -1029,9 +949,7 @@ export default function CompareClient() {
                         {p.handle}
                       </div>
                       <div style={{ padding: "18px 16px 22px" }}>
-                        {/* The exact badge the Home preview renders — the real
-                            generated monolith from lib/svg, with its scan-sweep
-                            divider, tower grow-up entrance, title and stats. */}
+                        {}
                         {/* eslint-disable-next-line @next/next/no-img-element -- same-origin generated SVG, sized by its own viewBox like the Home preview */}
                         <img src={compareBadgeSrc(p.user)} alt={`${p.user} streak badge`} style={{ width: "100%", height: "auto", display: "block" }} />
                       </div>
@@ -1042,7 +960,7 @@ export default function CompareClient() {
             </section>
           )}
 
-          {/* BATTLEGROUND + WALK OF FAME (shown before comparison) */}
+          {}
           {!compared && (
             <>
               <section style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(24px,4vw,44px) clamp(16px,4vw,40px) clamp(20px,3vw,30px)" }}>
@@ -1059,7 +977,7 @@ export default function CompareClient() {
                     <p style={{ margin: "14px 0 0", color: "var(--soft)", lineHeight: 1.6, fontSize: "16px" }}>Select a trending showdown, test your open-source trivia skills, or look up predictions before starting your custom battle.</p>
                   </div>
 
-                  {/* trending showdowns */}
+                  {}
                   <div style={{ position: "relative", marginTop: "clamp(28px,4vw,44px)" }}>
                     <div className="ui" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "9px", fontSize: "12.5px", letterSpacing: ".1em", color: "var(--text)", textTransform: "uppercase", fontWeight: 700 }}>
@@ -1081,9 +999,9 @@ export default function CompareClient() {
                     </div>
                   </div>
 
-                  {/* guess + AI predictions */}
+                  {}
                   <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "clamp(20px,3vw,28px)" }}>
-                    {/* guess the developer */}
+                    {}
                     <div onMouseEnter={() => setGuessPaused(true)} onMouseLeave={() => setGuessPaused(false)} style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "20px", padding: "24px", display: "flex", flexDirection: "column" }}>
                       <div className="ui" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "9px", fontSize: "12.5px", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 700 }}>
@@ -1135,7 +1053,7 @@ export default function CompareClient() {
                       </div>
                     </div>
 
-                    {/* AI predictions */}
+                    {}
                     <div style={{ position: "relative", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "20px", padding: "24px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
                       <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: "2px", background: "linear-gradient(90deg,var(--pa),var(--pb))" }} />
                       <div className="ui" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1180,14 +1098,12 @@ export default function CompareClient() {
                     </div>
                   </div>
 
-                  {/* stats strip */}
+                  {}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "14px", marginTop: "clamp(20px,3vw,28px)" }}>
                     {STRIP_DEFS.map(([val, label, iconName, iconColor]) => (
                       <div key={label} className="hov-card" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "18px", padding: "22px 16px", textAlign: "center" }}>
                         <div style={{ display: "flex", justifyContent: "center", color: "var(--accent-ink)" }}>{ic(iconName, iconColor)}</div>
-                        {/* Skeleton rather than a placeholder zero: the tiles
-                            are the first thing read on this page, and showing
-                            0 before the real tally lands reads as fact. */}
+                        {}
                         <div className="mono" style={{ fontSize: "clamp(26px,3.6vw,34px)", fontWeight: 700, marginTop: "10px", color: "var(--text)", minHeight: "1.2em", display: "grid", placeItems: "center" }}>
                           {countersPending ? (
                             <span aria-hidden="true" style={{ display: "block", width: "62px", height: "0.72em", borderRadius: "7px", background: "color-mix(in srgb,var(--soft) 18%,transparent)", animation: "sf-pulse 1.4s ease-in-out infinite" }} />
@@ -1204,7 +1120,7 @@ export default function CompareClient() {
                 </div>
               </section>
 
-              {/* WALK OF FAME */}
+              {}
               <section style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px,3vw,30px) clamp(16px,4vw,40px) clamp(40px,6vw,70px)" }}>
                 <div data-reveal style={{ position: "relative", overflow: "hidden", borderRadius: "26px", border: "1px solid var(--line)", background: "linear-gradient(160deg,var(--surface),var(--bg2))", padding: "clamp(24px,3.5vw,38px) 0" }}>
                   <div className="ui" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 clamp(18px,3vw,34px)", marginBottom: "18px" }}>
@@ -1231,7 +1147,7 @@ export default function CompareClient() {
             </>
           )}
 
-          {/* FOOTER */}
+          {}
           <footer className="ui" style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(20px,4vw,40px) clamp(16px,4vw,40px) 40px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", gap: "30px" }}>
               <div style={{ minWidth: "180px" }}>

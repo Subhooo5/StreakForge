@@ -6,17 +6,14 @@ interface LegendCardProps {
   followers: string;
   lang: string;
   initial: string;
-  /** Gradient shown behind the avatar until the real image resolves. */
   avatar: string;
-  /** Real GitHub avatar. */
   avatarUrl: string;
 }
 
 export default function LegendCard({ name, handle, role, followers, lang, initial, avatar, avatarUrl }: LegendCardProps) {
   return (
     <div className="hov-card" style={{ flexShrink: 0, width: "300px", display: "flex", alignItems: "center", gap: "14px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "18px", padding: "18px" }}>
-      {/* Eager: the avatar URL arrives in the same arena payload as the name,
-          so deferring the request only made avatars trail the text in. */}
+      {}
       <Avatar src={avatarUrl} initial={initial} tint={avatar} size={50} alt={handle} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "16px", fontWeight: 600, letterSpacing: "-.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
