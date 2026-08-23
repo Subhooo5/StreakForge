@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { useDashboardUser } from "./hooks/useDashboardUser";
 import { useCIAnalytics, useDashboardOverview, usePRInsights, useRefreshNonce } from "./hooks/useDashboardData";
+import TabLoader from "./components/TabLoader";
 import { RANGE_DAYS, bucketLabel, toActivityBuckets, toFame, toGraphNodes, toHeatmapGrid, toHist, toLangs, toMiniBars, toProfile } from "./data/overview";
 import ContributionHeatmap from "@/components/ContributionHeatmap";
 import type { HeatmapGrid } from "./data/overview";
@@ -195,11 +196,15 @@ export default function DashboardClient() {
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
   const [inactiveDays, setInactiveDays] = useState(90);
-  const [nonce, bump] = useRefreshNonce();
+  const [nonce, bump] = useRefreshNonce(username);
 
   const overview = useDashboardOverview(username, nonce);
   const ciRes = useCIAnalytics(username, tab === "CI Analytics", nonce);
   const prRes = usePRInsights(username, tab === "PR Insights", nonce);
+
+  const overviewPending = overview.loading && !overview.data && !overview.error;
+  const ciPending = ciRes.loading && !ciRes.data && !ciRes.error;
+  const prPending = prRes.loading && !prRes.data && !prRes.error;
 
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLCanvasElement>(null);
@@ -437,7 +442,7 @@ export default function DashboardClient() {
 
   useEffect(() => {
     initReveal();
-  }, [tab, initReveal]);
+  }, [tab, initReveal, overviewPending, ciPending, prPending]);
 
   useEffect(() => {
     if (tab !== "Overview") return;
@@ -829,7 +834,8 @@ export default function DashboardClient() {
   const cityBtnColor = cityMode ? "#fff" : "var(--pa)";
   const activeRes = isCI ? ciRes : isPR ? prRes : overview;
   const statusError = activeRes.error;
-  const statusLoading = activeRes.loading && !activeRes.data;
+  const tabPending = isCI ? ciPending : isPR ? prPending : overviewPending;
+  const statusLoading = activeRes.loading && !activeRes.data && !tabPending;
 
   const onShare = () => {
     try {
@@ -962,7 +968,9 @@ export default function DashboardClient() {
             </div>
           )}
 
-          {isOverview && (
+          {isOverview && overviewPending && <TabLoader label="Fetching Dashboard Data" />}
+
+          {isOverview && !overviewPending && (
             <>
               {}
               <div className="dash-grid" data-reveal style={{ display: "grid", gridTemplateColumns: "300px 1fr 300px", gap: "18px", marginTop: "clamp(22px,3vw,36px)" }}>
@@ -1524,7 +1532,9 @@ export default function DashboardClient() {
             </>
           )}
           {}
-          {isCI && (
+          {isCI && ciPending && <TabLoader label="Fetching CI Analytics" />}
+
+          {isCI && !ciPending && (
             <div style={{ marginTop: "clamp(22px,3vw,36px)", display: "flex", flexDirection: "column", gap: "18px" }}>
               {}
               <div data-reveal style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: "14px" }}>
@@ -1678,7 +1688,9 @@ export default function DashboardClient() {
             </div>
           )}
           {}
-          {isPR && (
+          {isPR && prPending && <TabLoader label="Fetching PR Insights" />}
+
+          {isPR && !prPending && (
             <div style={{ marginTop: "clamp(22px,3vw,36px)", display: "flex", flexDirection: "column", gap: "18px" }}>
               {}
               <div data-reveal style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: "14px" }}>
