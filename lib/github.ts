@@ -568,6 +568,10 @@ export const contributionsCache = new DistributedCache<CachedContributions>(1000
 const profileCache = new DistributedCache<GitHubUserProfile>(1000);
 const reposCache = new DistributedCache<GitHubRepo[]>(500);
 const contributedReposCache = new DistributedCache<ContributedRepo[]>(500);
+const popularReposCache = new DistributedCache<PopularRepo[]>(500);
+const pinnedReposCache = new DistributedCache<PopularRepo[]>(500);
+const starredReposCache = new DistributedCache<PopularRepo[]>(500);
+const deploymentsCache = new DistributedCache<import('../types/dashboard').DeploymentData[]>(500);
 
 interface GitHubUserProfile {
   login: string;
@@ -617,21 +621,21 @@ function sanitizeRepo(repo: GitHubRepo): GitHubRepo {
 }
 
 export function cacheKey(
-  kind: 'contributions' | 'profile' | 'repos' | 'repos:contributed',
+  kind: 'contributions' | 'profile' | 'repos' | 'repos:contributed' | 'repos:popular' | 'repos:pinned' | 'repos:starred' | 'deployments',
   username: string,
   year?: string,
   to?: string,
   org?: string
 ): string;
 export function cacheKey(
-  kind: 'contributions' | 'profile' | 'repos' | 'repos:contributed',
+  kind: 'contributions' | 'profile' | 'repos' | 'repos:contributed' | 'repos:popular' | 'repos:pinned' | 'repos:starred' | 'deployments',
   username: string,
   from?: string,
   to?: string,
   org?: string
 ): string;
 export function cacheKey(
-  kind: 'contributions' | 'profile' | 'repos' | 'repos:contributed',
+  kind: 'contributions' | 'profile' | 'repos' | 'repos:contributed' | 'repos:popular' | 'repos:pinned' | 'repos:starred' | 'deployments',
   username: string,
   yearOrFrom?: string,
   to?: string,
@@ -1856,7 +1860,7 @@ export interface PopularRepo {
   primaryLanguage: { name: string; color: string } | null;
 }
 
-export async function fetchPinnedRepos(username: string, token?: string): Promise<PopularRepo[]> {
+async function fetchPinnedReposUncached(username: string, token?: string): Promise<PopularRepo[]> {
   const query = `
     query($login: String!) {
       user(login: $login) {
@@ -1901,7 +1905,7 @@ export async function fetchPinnedRepos(username: string, token?: string): Promis
   }
 }
 
-async function fetchPopularRepos(username: string, token?: string): Promise<PopularRepo[]> {
+async function fetchPopularReposUncached(username: string, token?: string): Promise<PopularRepo[]> {
   const query = `
     query($login: String!) {
       user(login: $login) {
@@ -1944,7 +1948,7 @@ async function fetchPopularRepos(username: string, token?: string): Promise<Popu
   }
 }
 
-async function fetchStarredRepos(username: string, token?: string): Promise<PopularRepo[]> {
+async function fetchStarredReposUncached(username: string, token?: string): Promise<PopularRepo[]> {
   const query = `
     query($login: String!) {
       user(login: $login) {
@@ -2086,7 +2090,7 @@ async function fetchLatestDeployment(
   }
 }
 
-async function fetchDeploymentTrackerData(
+async function fetchDeploymentTrackerDataUncached(
   username: string,
   reposData: GitHubRepo[],
   limit = 3,
@@ -2150,6 +2154,74 @@ async function fetchDeploymentTrackerData(
     .slice(0, limit);
 }
 
+async function readThrough<T>(
+  cache: DistributedCache<T>,
+  key: string,
+  load: () => Promise<T>,
+  bypassCache?: boolean
+): Promise<T> {
+  if (bypassCache) {
+    const fresh = await load();
+    await cache.set(key, fresh, GITHUB_CACHE_TTL_MS);
+    return fresh;
+  }
+  return cache.getOrSet(key, load, GITHUB_CACHE_TTL_MS);
+}
+
+export async function fetchPinnedRepos(
+  username: string,
+  token?: string,
+  bypassCache?: boolean
+): Promise<PopularRepo[]> {
+  return readThrough(
+    pinnedReposCache,
+    cacheKey('repos:pinned', username),
+    () => fetchPinnedReposUncached(username, token),
+    bypassCache
+  );
+}
+
+async function fetchPopularRepos(
+  username: string,
+  token?: string,
+  bypassCache?: boolean
+): Promise<PopularRepo[]> {
+  return readThrough(
+    popularReposCache,
+    cacheKey('repos:popular', username),
+    () => fetchPopularReposUncached(username, token),
+    bypassCache
+  );
+}
+
+async function fetchStarredRepos(
+  username: string,
+  token?: string,
+  bypassCache?: boolean
+): Promise<PopularRepo[]> {
+  return readThrough(
+    starredReposCache,
+    cacheKey('repos:starred', username),
+    () => fetchStarredReposUncached(username, token),
+    bypassCache
+  );
+}
+
+async function fetchDeploymentTrackerData(
+  username: string,
+  reposData: GitHubRepo[],
+  limit = 3,
+  token?: string,
+  bypassCache?: boolean
+): Promise<import('../types/dashboard').DeploymentData[]> {
+  return readThrough(
+    deploymentsCache,
+    `${cacheKey('deployments', username)}:${limit}`,
+    () => fetchDeploymentTrackerDataUncached(username, reposData, limit, token),
+    bypassCache
+  );
+}
+
 export async function getFullDashboardData(username: string, options: FetchOptions = {}) {
   const [
     profileResult,
@@ -2164,9 +2236,9 @@ export async function getFullDashboardData(username: string, options: FetchOptio
     fetchUserRepos(username, options),
     fetchGitHubContributions(username, options),
     fetchContributedRepos(username, options),
-    fetchPopularRepos(username, options.token),
-    fetchPinnedRepos(username, options.token),
-    fetchStarredRepos(username, options.token),
+    fetchPopularRepos(username, options.token, options.bypassCache),
+    fetchPinnedRepos(username, options.token, options.bypassCache),
+    fetchStarredRepos(username, options.token, options.bypassCache),
   ]);
 
   if (profileResult.status === 'rejected')
@@ -2193,7 +2265,7 @@ export async function getFullDashboardData(username: string, options: FetchOptio
   const pinnedRepos = pinnedReposResult.status === 'fulfilled' ? pinnedReposResult.value : [];
   const starredRepos = starredReposResult.status === 'fulfilled' ? starredReposResult.value : [];
 
-  const deployments = await fetchDeploymentTrackerData(username, reposData, 3, options.token).catch(
+  const deployments = await fetchDeploymentTrackerData(username, reposData, 3, options.token, options.bypassCache).catch(
     () => []
   );
 

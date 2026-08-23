@@ -45,19 +45,21 @@ export async function GET(request: Request) {
     }
 
     const options = { bypassCache, signal: controller.signal };
-    const data = await getFullDashboardData(username, options);
 
-    const repoActivity: RepoActivityInfo[] = await fetchUserRepos(username, options)
-      .then((repos) =>
-        repos
-          .filter((r) => !r.fork)
-          .map((r) => ({
-            name: r.name,
-            url: `https://github.com/${r.owner?.login ?? username}/${r.name}`,
-            pushedAt: r.pushed_at ?? null,
-          })),
-      )
-      .catch(() => []);
+    const [data, repoActivity] = await Promise.all([
+      getFullDashboardData(username, options),
+      fetchUserRepos(username, options)
+        .then<RepoActivityInfo[]>((repos) =>
+          repos
+            .filter((r) => !r.fork)
+            .map((r) => ({
+              name: r.name,
+              url: `https://github.com/${r.owner?.login ?? username}/${r.name}`,
+              pushedAt: r.pushed_at ?? null,
+            })),
+        )
+        .catch<RepoActivityInfo[]>(() => []),
+    ]);
 
     const payload = JSON.stringify({ user: username, ...data, repoActivity });
     const etag = `W/"${crypto.createHash("sha1").update(payload).digest("hex")}"`;
