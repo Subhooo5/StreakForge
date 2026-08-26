@@ -25,42 +25,8 @@ import CIHighlightCard from "./components/CIHighlightCard";
 import PRHighlightCard from "./components/PRHighlightCard";
 import ContributionCity from "./components/ContributionCity";
 import { Hover } from "@/components/Hover";
-
-const NAV_REPO_BASE: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  fontSize: "13.5px",
-  fontWeight: 500,
-  padding: "9px 15px",
-  borderWidth: "1px",
-  borderStyle: "solid",
-  borderColor: "var(--line)",
-  borderRadius: "11px",
-  background: "var(--surface2)",
-  transition: "transform .18s ease,border-color .18s ease,box-shadow .18s ease",
-};
-const NAV_REPO_HOVER: React.CSSProperties = {
-  transform: "translateY(-1px)",
-  borderColor: "var(--accent)",
-  boxShadow: "0 6px 20px -10px var(--accent)",
-};
-const NAV_TOGGLE_BASE: React.CSSProperties = {
-  width: "40px",
-  height: "40px",
-  display: "grid",
-  placeItems: "center",
-  borderWidth: "1px",
-  borderStyle: "solid",
-  borderColor: "var(--line)",
-  borderRadius: "11px",
-  background: "var(--surface2)",
-  transition: "transform .18s,border-color .18s",
-};
-const NAV_TOGGLE_HOVER: React.CSSProperties = {
-  transform: "translateY(-1px)",
-  borderColor: "var(--accent)",
-};
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const gridReactivity = 1.2;
 
@@ -846,20 +812,6 @@ export default function DashboardClient() {
     if (shareTimerRef.current) clearTimeout(shareTimerRef.current);
     shareTimerRef.current = setTimeout(() => setShared(false), 1600);
   };
-  const toggleMenu = () => setMenuOpen((m) => !m);
-  const themeIcon =
-    theme === "dark" ? (
-      <svg width={18} height={18} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} fill="none">
-        <circle cx={12} cy={12} r={4.2} />
-        <path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M19.4 4.6l-1.7 1.7M6.3 17.7l-1.7 1.7" strokeLinecap="round" />
-      </svg>
-    ) : (
-      <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" />
-      </svg>
-    );
-  const logoSrc = theme === "dark" ? "/streakforge-logo-dark.svg" : "/streakforge-logo-light.svg";
-  const menuDisplay = menuOpen ? "block" : "none";
   const year = new Date().getFullYear();
 
   return (
@@ -890,61 +842,7 @@ export default function DashboardClient() {
         </div>
 
         {}
-        <header style={{ position: "sticky", top: 0, zIndex: 40 }}>
-          <div style={{ background: "var(--surface)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--line2)" }}>
-            <nav style={{ maxWidth: "1240px", margin: "0 auto", padding: "14px clamp(16px,4vw,40px)", display: "flex", alignItems: "center", gap: "28px" }}>
-              <a href="/" style={{ display: "flex", alignItems: "center", flex: "none" }}>
-                <img src={logoSrc} alt="StreakForge" style={{ height: "41px", width: "150px", display: "block" }} />
-              </a>
-              <div className="nav-links ui" style={{ display: "flex", alignItems: "center", gap: "30px", marginLeft: "14px", fontSize: "14.5px", color: "var(--soft)" }}>
-                <Hover as="a" className="sf-link" href="/generator" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                  Generator
-                </Hover>
-                <Hover as="a" className="sf-link" href="/compare" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                  Compare
-                </Hover>
-                <Hover as="a" className="sf-link" href="/burnout-analyzer" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                  Burnout Radar
-                </Hover>
-                <Hover as="a" className="sf-link" href="/customize" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                  Customization Studio
-                </Hover>
-              </div>
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
-                <Hover as="a" className="nav-repo ui" href="https://github.com/Subhooo5/StreakForge" target="_blank" rel="noopener" base={NAV_REPO_BASE} hover={NAV_REPO_HOVER}>
-                  <svg width={16} height={16} viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-                  </svg>
-                  GitHub Repo
-                </Hover>
-                <Hover as="button" onClick={toggleTheme} aria-label="Toggle theme" base={NAV_TOGGLE_BASE} hover={NAV_TOGGLE_HOVER}>
-                  {themeIcon}
-                </Hover>
-                <button className="nav-burger" onClick={toggleMenu} aria-label="Menu" style={{ width: "40px", height: "40px", alignItems: "center", justifyContent: "center", border: "1px solid var(--line)", borderRadius: "11px", background: "var(--surface2)" }}>
-                  <svg width={18} height={18} viewBox="0 0 18 18" stroke="currentColor" strokeWidth={1.6}>
-                    <path d="M2 5h14M2 9h14M2 13h14" />
-                  </svg>
-                </button>
-              </div>
-            </nav>
-          </div>
-          <div className="ui" style={{ display: menuDisplay, borderBottom: "1px solid var(--line)", background: "var(--bg2)" }}>
-            <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "8px clamp(16px,4vw,40px) 18px", display: "flex", flexDirection: "column" }}>
-              <a href="/generator" onClick={toggleMenu} style={{ padding: "13px 4px", borderBottom: "1px solid var(--line2)", fontSize: "15px" }}>
-                Generator
-              </a>
-              <a href="/compare" onClick={toggleMenu} style={{ padding: "13px 4px", borderBottom: "1px solid var(--line2)", fontSize: "15px" }}>
-                Compare
-              </a>
-              <a href="/burnout-analyzer" onClick={toggleMenu} style={{ padding: "13px 4px", borderBottom: "1px solid var(--line2)", fontSize: "15px" }}>
-                Burnout Radar
-              </a>
-              <a href="/customize" onClick={toggleMenu} style={{ padding: "13px 4px", borderBottom: "1px solid var(--line2)", fontSize: "15px" }}>
-                Customization Studio
-              </a>
-            </div>
-          </div>
-        </header>
+        <Navbar theme={theme} toggleTheme={toggleTheme} active="dashboard" />
 
         <main id="top" data-screen-label="User Dashboard" style={{ maxWidth: "1320px", margin: "0 auto", padding: "clamp(22px,3vw,38px) clamp(16px,4vw,40px) 0" }}>
           {}
@@ -1864,83 +1762,7 @@ export default function DashboardClient() {
           )}
 
           {}
-          <footer className="ui" style={{ margin: "0 auto", padding: "clamp(40px,6vw,80px) 0 40px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", gap: "30px" }}>
-              <div style={{ minWidth: "180px" }}>
-                <a href="/" style={{ display: "inline-flex", alignItems: "center" }}>
-                  <img src={logoSrc} alt="StreakForge" style={{ height: "52px", width: "156px", display: "block" }} />
-                </a>
-                <p style={{ margin: "16px 0 0", color: "var(--soft)", fontSize: "13.5px", lineHeight: 1.6, maxWidth: "240px" }}>GitHub contribution data, forged into premium 3D isometric monoliths. Real-time. Embeddable. Yours.</p>
-              </div>
-              <div>
-                <div style={{ fontSize: "12px", letterSpacing: ".08em", color: "var(--faint)", textTransform: "uppercase", fontWeight: 600 }}>Product</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "11px", marginTop: "16px", fontSize: "14px", color: "var(--soft)" }}>
-                  <Hover as="a" className="sf-link" href="/generator" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Generator
-                  </Hover>
-                  <Hover as="a" className="sf-link" href="/compare" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Compare
-                  </Hover>
-                  <Hover as="a" className="sf-link" href="/burnout-analyzer" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Burnout Radar
-                  </Hover>
-                  <Hover as="a" className="sf-link" href="/customize" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Customization Studio
-                  </Hover>
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: "12px", letterSpacing: ".08em", color: "var(--faint)", textTransform: "uppercase", fontWeight: 600 }}>Resources</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "11px", marginTop: "16px", fontSize: "14px", color: "var(--soft)" }}>
-                  <Hover as="a" className="sf-link" href="#" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Documentation
-                  </Hover>
-                  <Hover as="a" className="sf-link" href="https://github.com/Subhooo5/StreakForge" target="_blank" rel="noopener" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Repository
-                  </Hover>
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: "12px", letterSpacing: ".08em", color: "var(--faint)", textTransform: "uppercase", fontWeight: 600 }}>Connect</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "11px", marginTop: "16px", fontSize: "14px", color: "var(--soft)" }}>
-                  <Hover as="a" className="sf-link" href="https://github.com/Subhooo5" target="_blank" rel="noopener" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    GitHub
-                  </Hover>
-                  <Hover as="a" className="sf-link" href="https://discordapp.com/users/488670412096667648" target="_blank" rel="noopener" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Discord
-                  </Hover>
-                  <Hover as="a" className="sf-link" href="https://x.com/SiMpL36969" target="_blank" rel="noopener" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    Twitter
-                  </Hover>
-                  <Hover as="a" className="sf-link" href="https://www.linkedin.com/in/subho1817/" target="_blank" rel="noopener" base={{ transition: "color .2s" }} hover={{ color: "var(--text)" }}>
-                    LinkedIn
-                  </Hover>
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px", marginTop: "48px", paddingTop: "24px", borderTop: "1px solid var(--line)" }}>
-              <span style={{ fontSize: "13px", color: "var(--faint)" }} className="mono">
-                © {year} StreakForge · Made with ❤️‍🔥 for Devs
-              </span>
-              <div style={{ display: "flex", gap: "14px", color: "var(--soft)" }}>
-                <Hover as="a" href="https://github.com/Subhooo5" target="_blank" rel="noopener" aria-label="GitHub" base={{ transition: "color .2s" }} hover={{ color: "var(--accent-ink)" }}>
-                  <svg width={19} height={19} viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-                  </svg>
-                </Hover>
-                <Hover as="a" href="https://x.com/SiMpL36969" target="_blank" rel="noopener" aria-label="X" base={{ transition: "color .2s" }} hover={{ color: "var(--accent-ink)" }}>
-                  <svg width={18} height={18} viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M12.6 1h2.1L10 6.4 15.5 15h-4.3L7.9 9.9 3.9 15H1.8l4.9-5.8L1.5 1h4.4l3 4.6L12.6 1Zm-.7 12.6h1.1L4.6 2.3H3.4l8.5 11.3Z" />
-                  </svg>
-                </Hover>
-                <Hover as="a" href="https://www.linkedin.com/in/subho1817/" target="_blank" rel="noopener" aria-label="LinkedIn" base={{ transition: "color .2s" }} hover={{ color: "var(--accent-ink)" }}>
-                  <svg width={18} height={18} viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M3.4 1.5a1.4 1.4 0 1 1-.01 2.81A1.4 1.4 0 0 1 3.4 1.5ZM1.9 5.5h3V14h-3V5.5Zm5 0h2.9v1.16h.04c.4-.74 1.39-1.52 2.86-1.52 3.06 0 3.62 2 3.62 4.62V14h-3v-3.7c0-.88-.02-2.02-1.23-2.02-1.23 0-1.42.96-1.42 1.95V14h-3V5.5Z" />
-                  </svg>
-                </Hover>
-              </div>
-            </div>
-          </footer>
+          <Footer theme={theme} active="dashboard" docsHref="/docs" />
         </main>
       </div>
     </div>

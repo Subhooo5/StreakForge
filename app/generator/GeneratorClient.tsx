@@ -19,6 +19,8 @@ import { EMPTY_STATE, type GeneratorState, type TechIconDisplay } from './types'
 import { generateReadme, socialPlaceholder } from './utils/readme';
 import { computeCompletion, generateTips, getGrade } from './utils/score';
 import type { ProfilePreset } from './data/presets';
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 type OpenState = { name: boolean; desc: boolean; tech: boolean; social: boolean; badge: boolean; viz: boolean; spotlight: boolean };
 
@@ -49,46 +51,6 @@ function iconEl(name: string, url: string | undefined, bg: string, fg: string, s
   const fb = monoURI(name, bg, fg);
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={url || fb} width={size} height={size} loading="lazy" decoding="async" alt={name} data-fb={fb} onError={(e) => { const t = e.currentTarget; if (t.getAttribute('data-failed')) return; t.setAttribute('data-failed', '1'); t.src = t.getAttribute('data-fb') || fb; }} style={{ width: size + 'px', height: size + 'px', objectFit: 'contain', display: 'block' }} />;
-}
-
-function Logo() {
-  return (
-    <svg viewBox="0 0 545 150" xmlns="http://www.w3.org/2000/svg" style={{ height: '41px', width: '150px', display: 'block' }}>
-      <defs><radialGradient id="sparkNG" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#FFE8B8" /><stop offset="45%" stopColor="#FFB627" /><stop offset="100%" stopColor="#FF7A1A" stopOpacity={0} /></radialGradient></defs>
-      <polygon points="25.16,60.45 42.32,69.03 25.16,77.61 8.0,69.03" fill="#E0AAFF" />
-      <polygon points="42.32,69.03 25.16,77.61 25.16,96.33 42.32,87.75" fill="#B14AED" />
-      <polygon points="8.0,69.03 25.16,77.61 25.16,96.33 8.0,87.75" fill="#6A0DAD" />
-      <polygon points="53.24,51.09 70.4,59.67 53.24,68.25 36.08,59.67" fill="#E0AAFF" />
-      <polygon points="70.4,59.67 53.24,68.25 53.24,107.25 70.4,98.67" fill="#B14AED" />
-      <polygon points="36.08,59.67 53.24,68.25 53.24,107.25 36.08,98.67" fill="#6A0DAD" />
-      <polygon points="81.32,41.73 98.48,50.31 81.32,58.89 64.16,50.31" fill="#E0AAFF" />
-      <polygon points="98.48,50.31 81.32,58.89 81.32,121.29 98.48,112.71" fill="#B14AED" />
-      <polygon points="64.16,50.31 81.32,58.89 81.32,121.29 64.16,112.71" fill="#6A0DAD" />
-      <circle cx="81.32" cy="41.73" r="13.26" fill="url(#sparkNG)" />
-      <circle cx="81.32" cy="41.73" r="3.51" fill="#FFE8B8" />
-      <text x="114" y="91" fontFamily="'Space Grotesk','Styrene B',sans-serif" fontSize={62} fontWeight={700} letterSpacing={-1} fill="var(--text)">streakforge</text>
-    </svg>
-  );
-}
-
-function FooterLogo() {
-  return (
-    <svg viewBox="0 0 545 150" xmlns="http://www.w3.org/2000/svg" style={{ height: '52px', width: '156px', display: 'block' }}>
-      <defs><radialGradient id="sparkNF" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#FFE8B8" /><stop offset="45%" stopColor="#FFB627" /><stop offset="100%" stopColor="#FF7A1A" stopOpacity={0} /></radialGradient></defs>
-      <polygon points="25.16,60.45 42.32,69.03 25.16,77.61 8.0,69.03" fill="#E0AAFF" />
-      <polygon points="42.32,69.03 25.16,77.61 25.16,96.33 42.32,87.75" fill="#B14AED" />
-      <polygon points="8.0,69.03 25.16,77.61 25.16,96.33 8.0,87.75" fill="#6A0DAD" />
-      <polygon points="53.24,51.09 70.4,59.67 53.24,68.25 36.08,59.67" fill="#E0AAFF" />
-      <polygon points="70.4,59.67 53.24,68.25 53.24,107.25 70.4,98.67" fill="#B14AED" />
-      <polygon points="36.08,59.67 53.24,68.25 53.24,107.25 36.08,98.67" fill="#6A0DAD" />
-      <polygon points="81.32,41.73 98.48,50.31 81.32,58.89 64.16,50.31" fill="#E0AAFF" />
-      <polygon points="98.48,50.31 81.32,58.89 81.32,121.29 98.48,112.71" fill="#B14AED" />
-      <polygon points="64.16,50.31 81.32,58.89 81.32,121.29 64.16,112.71" fill="#6A0DAD" />
-      <circle cx="81.32" cy="41.73" r="13.26" fill="url(#sparkNF)" />
-      <circle cx="81.32" cy="41.73" r="3.51" fill="#FFE8B8" />
-      <text x="114" y="91" fontFamily="'Space Grotesk','Styrene B',sans-serif" fontSize={62} fontWeight={700} letterSpacing={-1} fill="var(--text)">streakforge</text>
-    </svg>
-  );
 }
 
 function chip(active: boolean) {
@@ -338,41 +300,7 @@ export default function GeneratorClient() {
         </div>
 
         {}
-        <header style={{ position: 'sticky', top: 0, zIndex: 40 }}>
-          <div style={{ background: 'var(--surface)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--line2)' }}>
-            <nav style={{ maxWidth: '1240px', margin: '0 auto', padding: '14px clamp(16px,4vw,40px)', display: 'flex', alignItems: 'center', gap: '28px' }}>
-              <a href="/" style={{ display: 'flex', alignItems: 'center', flex: 'none' }}><Logo /></a>
-              <div className="nav-links ui" style={{ display: 'flex', alignItems: 'center', gap: '30px', marginLeft: '14px', fontSize: '14.5px', color: 'var(--soft)' }}>
-                <a className="sf-link" href="/generator" style={{ color: 'var(--text)', transition: 'color .2s' }}>Generator</a>
-                <Hover as="a" className="sf-link" href="/compare" base={{ transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>Compare</Hover>
-                <Hover as="a" className="sf-link" href="/burnout-analyzer" base={{ transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>Burnout Radar</Hover>
-                <Hover as="a" className="sf-link" href="/customize" base={{ transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>Customization Studio</Hover>
-              </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Hover as="a" className="nav-repo ui" href="https://github.com/Subhooo5/StreakForge" target="_blank" rel="noopener" base={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 500, padding: '9px 15px', border: '1px solid var(--line)', borderRadius: '11px', background: 'var(--surface2)', transition: 'transform .18s ease,border-color .18s ease,box-shadow .18s ease' }} hover={{ transform: 'translateY(-1px)', border: '1px solid var(--accent)', boxShadow: '0 6px 20px -10px var(--accent)' }}>
-                  <svg width={16} height={16} viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z" /></svg>
-                  GitHub Repo
-                </Hover>
-                <Hover as="button" onClick={toggleTheme} aria-label="Toggle theme" base={{ width: '40px', height: '40px', display: 'grid', placeItems: 'center', border: '1px solid var(--line)', borderRadius: '11px', background: 'var(--surface2)', transition: 'transform .18s,border-color .18s' }} hover={{ transform: 'translateY(-1px)', border: '1px solid var(--accent)' }}>
-                  {theme === 'dark'
-                    ? <svg width={18} height={18} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} fill="none"><circle cx={12} cy={12} r={4.2} /><path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M19.4 4.6l-1.7 1.7M6.3 17.7l-1.7 1.7" strokeLinecap="round" /></svg>
-                    : <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" /></svg>}
-                </Hover>
-                <button className="nav-burger" onClick={() => setMenuOpen(m => !m)} aria-label="Menu" style={{ width: '40px', height: '40px', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--line)', borderRadius: '11px', background: 'var(--surface2)' }}>
-                  <svg width={18} height={18} viewBox="0 0 18 18" stroke="currentColor" strokeWidth={1.6}><path d="M2 5h14M2 9h14M2 13h14" /></svg>
-                </button>
-              </div>
-            </nav>
-          </div>
-          <div className="ui" style={{ display: menuOpen ? 'block' : 'none', borderBottom: '1px solid var(--line)', background: 'var(--bg2)' }}>
-            <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '8px clamp(16px,4vw,40px) 18px', display: 'flex', flexDirection: 'column' }}>
-              <a href="/generator" onClick={() => setMenuOpen(false)} style={{ padding: '13px 4px', borderBottom: '1px solid var(--line2)', fontSize: '15px' }}>Generator</a>
-              <a href="/compare" onClick={() => setMenuOpen(false)} style={{ padding: '13px 4px', borderBottom: '1px solid var(--line2)', fontSize: '15px' }}>Compare</a>
-              <a href="/burnout-analyzer" onClick={() => setMenuOpen(false)} style={{ padding: '13px 4px', borderBottom: '1px solid var(--line2)', fontSize: '15px' }}>Burnout Radar</a>
-              <a href="/customize" onClick={() => setMenuOpen(false)} style={{ padding: '13px 4px', borderBottom: '1px solid var(--line2)', fontSize: '15px' }}>Customization Studio</a>
-            </div>
-          </div>
-        </header>
+        <Navbar theme={theme} toggleTheme={toggleTheme} active="generator" />
 
         <main style={{ maxWidth: '1320px', margin: '0 auto', padding: '0 clamp(16px,4vw,40px)' }}>
 
@@ -666,45 +594,7 @@ export default function GeneratorClient() {
           </section>
 
           {}
-          <footer className="ui" style={{ padding: 'clamp(40px,6vw,80px) 0 40px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: '30px' }}>
-              <div style={{ minWidth: '180px' }}>
-                <a href="/" style={{ display: 'inline-flex', alignItems: 'center' }}><FooterLogo /></a>
-                <p style={{ margin: '16px 0 0', color: 'var(--soft)', fontSize: '13.5px', lineHeight: 1.6, maxWidth: '240px' }}>GitHub contribution data, forged into premium 3D isometric monoliths. Real-time. Embeddable. Yours.</p>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', letterSpacing: '.08em', color: 'var(--faint)', textTransform: 'uppercase', fontWeight: 600 }}>Product</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '11px', marginTop: '16px', fontSize: '14px', color: 'var(--soft)' }}>
-                  {[['Generator', '/generator'], ['Compare', '/compare'], ['Burnout Radar', '/burnout-analyzer'], ['Customization Studio', '/customize']].map(([label, href]) => (
-                    <Hover key={label} as="a" className="sf-link" href={href} base={{ transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>{label}</Hover>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', letterSpacing: '.08em', color: 'var(--faint)', textTransform: 'uppercase', fontWeight: 600 }}>Resources</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '11px', marginTop: '16px', fontSize: '14px', color: 'var(--soft)' }}>
-                  <Hover as="a" className="sf-link" href="#" base={{ transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>Documentation</Hover>
-                  <Hover as="a" className="sf-link" href="https://github.com/Subhooo5/StreakForge" target="_blank" rel="noopener" base={{ transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>Repository</Hover>
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '12px', letterSpacing: '.08em', color: 'var(--faint)', textTransform: 'uppercase', fontWeight: 600 }}>Connect</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '11px', marginTop: '16px', fontSize: '14px', color: 'var(--soft)' }}>
-                  {[['GitHub', 'https://github.com/Subhooo5', '_blank'], ['Discord', 'https://discordapp.com/users/488670412096667648', '_blank'], ['Twitter', 'https://x.com/SiMpL36969', '_blank'], ['LinkedIn', 'https://www.linkedin.com/in/subho1817/', '_blank']].map(([label, href, target]) => (
-                    <Hover key={label} as="a" className="sf-link" href={href} target={target || undefined} rel={target ? 'noopener' : undefined} base={{ transition: 'color .2s' }} hover={{ color: 'var(--text)' }}>{label}</Hover>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', marginTop: '48px', paddingTop: '24px', borderTop: '1px solid var(--line)' }}>
-              <span style={{ fontSize: '13px', color: 'var(--faint)' }} className="mono">© {new Date().getFullYear()} StreakForge · Made with ❤️‍🔥 for Devs</span>
-              <div style={{ display: 'flex', gap: '14px', color: 'var(--soft)' }}>
-                <Hover as="a" href="https://github.com/Subhooo5" target="_blank" rel="noopener" aria-label="GitHub" base={{ transition: 'color .2s' }} hover={{ color: 'var(--accent-ink)' }}><svg width={19} height={19} viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z" /></svg></Hover>
-                <Hover as="a" href="https://x.com/SiMpL36969" target="_blank" rel="noopener" aria-label="X" base={{ transition: 'color .2s' }} hover={{ color: 'var(--accent-ink)' }}><svg width={18} height={18} viewBox="0 0 16 16" fill="currentColor"><path d="M12.6 1h2.1L10 6.4 15.5 15h-4.3L7.9 9.9 3.9 15H1.8l4.9-5.8L1.5 1h4.4l3 4.6L12.6 1Zm-.7 12.6h1.1L4.6 2.3H3.4l8.5 11.3Z" /></svg></Hover>
-                <Hover as="a" href="https://www.linkedin.com/in/subho1817/" target="_blank" rel="noopener" aria-label="LinkedIn" base={{ transition: 'color .2s' }} hover={{ color: 'var(--accent-ink)' }}><svg width={18} height={18} viewBox="0 0 16 16" fill="currentColor"><path d="M3.4 1.5a1.4 1.4 0 1 1-.01 2.81A1.4 1.4 0 0 1 3.4 1.5ZM1.9 5.5h3V14h-3V5.5Zm5 0h2.9v1.16h.04c.4-.74 1.39-1.52 2.86-1.52 3.06 0 3.62 2 3.62 4.62V14h-3v-3.7c0-.88-.02-2.02-1.23-2.02-1.23 0-1.42.96-1.42 1.95V14h-3V5.5Z" /></svg></Hover>
-              </div>
-            </div>
-          </footer>
+          <Footer theme={theme} active="generator" docsHref="/docs#generator" />
         </main>
       </div>
     </div>
