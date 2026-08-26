@@ -1762,7 +1762,7 @@ export default function DashboardClient() {
           )}
 
           {}
-          <Footer theme={theme} active="dashboard" docsHref="/docs" />
+          <Footer active="dashboard" docsHref="/docs" />
         </main>
       </div>
     </div>

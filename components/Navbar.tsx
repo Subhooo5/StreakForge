@@ -70,8 +70,13 @@ export function themeToggleIcon(theme: Theme) {
   );
 }
 
-export function logoSrcFor(theme: Theme) {
-  return theme === "dark" ? "/streakforge-logo-dark.svg" : "/streakforge-logo-light.svg";
+export function BrandLogo({ height, width }: { height: string; width: string }) {
+  return (
+    <>
+      <img className="sf-logo sf-logo-light" src="/streakforge-logo-light.svg" alt="StreakForge" style={{ height, width }} />
+      <img className="sf-logo sf-logo-dark" src="/streakforge-logo-dark.svg" alt="StreakForge" style={{ height, width }} />
+    </>
+  );
 }
 
 export function homeHrefFor(active: NavKey) {
@@ -87,7 +92,7 @@ export default function Navbar({ theme, toggleTheme, active }: { theme: Theme; t
       <div style={{ background: "var(--surface)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--line2)" }}>
         <nav style={{ maxWidth: "1240px", margin: "0 auto", padding: "14px clamp(16px,4vw,40px)", display: "flex", alignItems: "center", gap: "28px" }}>
           <a href={homeHrefFor(active)} style={{ display: "flex", alignItems: "center", flex: "none" }}>
-            <img src={logoSrcFor(theme)} alt="StreakForge" style={{ height: "41px", width: "150px", display: "block" }} />
+            <BrandLogo height="41px" width="150px" />
           </a>
 
           <div className="nav-links ui" style={{ display: "flex", alignItems: "center", gap: "30px", marginLeft: "14px", fontSize: "14.5px", color: "var(--soft)" }}>

@@ -750,7 +750,7 @@ export default function HomeClient() {
           </section>
 
           {}
-          <Footer theme={theme} active="home" docsHref="/docs" />
+          <Footer active="home" docsHref="/docs" />
         </main>
       </div>
 

@@ -1,9 +1,8 @@
 "use client";
 
 import { Hover } from "./Hover";
-import { NAV_LINKS, REPO_URL, homeHrefFor, logoSrcFor } from "./Navbar";
+import { BrandLogo, NAV_LINKS, REPO_URL, homeHrefFor } from "./Navbar";
 import type { NavKey } from "./Navbar";
-import type { Theme } from "@/hooks/useTheme";
 
 const SOCIALS = [
   { label: "GitHub", href: "https://github.com/Subhooo5" },
@@ -49,13 +48,13 @@ const ICON_LINKS = [
   },
 ] as const;
 
-export default function Footer({ theme, active, docsHref = "/docs" }: { theme: Theme; active: NavKey; docsHref?: string }) {
+export default function Footer({ active, docsHref = "/docs" }: { active: NavKey; docsHref?: string }) {
   return (
     <footer className="ui" style={{ maxWidth: "1180px", margin: "0 auto", padding: "clamp(48px,7vw,90px) clamp(16px,4vw,40px) 40px" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", gap: "30px" }}>
         <div style={{ minWidth: "180px" }}>
           <a href={homeHrefFor(active)} style={{ display: "inline-flex", alignItems: "center" }}>
-            <img src={logoSrcFor(theme)} alt="StreakForge" style={{ height: "52px", width: "156px", display: "block" }} />
+            <BrandLogo height="52px" width="156px" />
           </a>
           <p style={{ margin: "16px 0 0", color: "var(--soft)", fontSize: "13.5px", lineHeight: 1.6, maxWidth: "240px" }}>
             GitHub contribution data, forged into premium 3D isometric monoliths. Real-time. Embeddable. Yours.

@@ -187,7 +187,7 @@ export default function DocsClient() {
           </div>
         </div>
 
-        <Footer theme={theme} active="docs" docsHref="/docs" />
+        <Footer active="docs" docsHref="/docs" />
       </main>
     </div>
   );

@@ -493,7 +493,7 @@ export default function CustomizeClient() {
           </div>
 
           {}
-          <Footer theme={theme} active="customize" docsHref="/docs#customization-studio" />
+          <Footer active="customize" docsHref="/docs#customization-studio" />
 
         </main>
       </div>

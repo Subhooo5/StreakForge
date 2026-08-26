@@ -432,3 +432,16 @@ input[type=range]::-moz-range-thumb {
     overflow: visible;
   }
 }
+
+.sf-logo {
+  display: block;
+}
+.sf-logo-dark {
+  display: none;
+}
+:root.dark .sf-logo-light {
+  display: none;
+}
+:root.dark .sf-logo-dark {
+  display: block;
+}

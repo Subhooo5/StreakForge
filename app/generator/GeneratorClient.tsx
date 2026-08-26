@@ -594,7 +594,7 @@ export default function GeneratorClient() {
           </section>
 
           {}
-          <Footer theme={theme} active="generator" docsHref="/docs#generator" />
+          <Footer active="generator" docsHref="/docs#generator" />
         </main>
       </div>
     </div>

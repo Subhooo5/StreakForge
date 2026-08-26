@@ -1002,7 +1002,7 @@ export default function CompareClient() {
           )}
 
           {}
-          <Footer theme={theme} active="compare" docsHref="/docs#compare" />
+          <Footer active="compare" docsHref="/docs#compare" />
         </main>
       </div>
     </div>

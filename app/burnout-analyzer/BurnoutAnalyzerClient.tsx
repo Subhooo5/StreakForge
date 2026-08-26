@@ -637,7 +637,7 @@ export default function BurnoutAnalyzerClient() {
           )}
 
           {}
-          <Footer theme={theme} active="burnout-analyzer" docsHref="/docs#burnout-analyzer" />
+          <Footer active="burnout-analyzer" docsHref="/docs#burnout-analyzer" />
 
         </main>
       </div>
