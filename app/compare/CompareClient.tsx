@@ -14,7 +14,7 @@ import LegendCard from "./components/LegendCard";
 import TrendCard from "./components/TrendCard";
 import { avatarFor, buildProfile, deriveRadar, deriveWinner, hash } from "./data/compareData";
 import { compareBadgeSrc, useArena, useBattle } from "./hooks/useCompare";
-import type { CompareActivityPayload } from "@/types/compare";
+import type { ArenaPayload, CompareActivityPayload } from "@/types/compare";
 import { Hover } from "@/components/Hover";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -173,7 +173,7 @@ function barFor(av: number, bv: number): [number, number, boolean] {
   return [ap, 100 - ap, av >= bv];
 }
 
-export default function CompareClient() {
+export default function CompareClient({ initialArena }: { initialArena?: ArenaPayload | null }) {
   const [theme, toggleTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userA, setUserA] = useState("");
@@ -394,7 +394,7 @@ export default function CompareClient() {
   const runRevealRef = useRef(runReveal);
   runRevealRef.current = runReveal;
 
-  const arena = useArena();
+  const arena = useArena(initialArena);
   const { recent: recentBattles, remember: rememberBattle, clear: clearRecentBattles } = useRecentList<RecentBattle>("sf-recent-comparisons", recentBattleKey);
   const onBattleComplete = useCallback(() => {
     arena.reload();

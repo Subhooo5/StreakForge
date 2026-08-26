@@ -2,7 +2,6 @@ import "server-only";
 import mongoose, { Schema } from "mongoose";
 import dbConnect from "@/lib/mongodb";
 import { logger } from "@/lib/logger";
-import { localReadCounters, localReadPairCounts, localRecordComparison } from "./local-counters";
 
 function isStoreReachable(): boolean {
   return mongoose.connection.readyState === 1;
@@ -16,7 +15,7 @@ interface CounterDoc {
   _id: string;
   comparisons: number;
   reposAnalyzed: number;
-  languages: string[];
+  languagesTracked: number;
 }
 
 const counterSchema = new Schema<CounterDoc>(
@@ -24,7 +23,7 @@ const counterSchema = new Schema<CounterDoc>(
     _id: { type: String, required: true },
     comparisons: { type: Number, default: 0 },
     reposAnalyzed: { type: Number, default: 0 },
-    languages: { type: [String], default: [] },
+    languagesTracked: { type: Number, default: 0 },
   },
   { collection: COLLECTION, versionKey: false },
 );
@@ -67,7 +66,7 @@ export interface RecordComparisonInput {
 }
 
 export async function recordComparison(input: RecordComparisonInput): Promise<void> {
-  const languages = [...new Set(input.languages.filter(Boolean))];
+  const languages = new Set(input.languages.map((name) => name.trim()).filter(Boolean));
 
   try {
     await dbConnect();
@@ -78,8 +77,11 @@ export async function recordComparison(input: RecordComparisonInput): Promise<vo
           updateOne: {
             filter: { _id: globalId() },
             update: {
-              $inc: { comparisons: 1, reposAnalyzed: Math.max(0, input.reposAnalyzed) },
-              ...(languages.length ? { $addToSet: { languages: { $each: languages } } } : {}),
+              $inc: {
+                comparisons: 1,
+                reposAnalyzed: Math.max(0, input.reposAnalyzed),
+                languagesTracked: languages.size,
+              },
             },
             upsert: true,
           },
@@ -102,8 +104,7 @@ export async function recordComparison(input: RecordComparisonInput): Promise<vo
       { ordered: false },
     );
   } catch (error) {
-    localRecordComparison({ ...input, languages, pairKey: pairKey(input.userA, input.userB) });
-    logger.warn("Compare counters update fell back to the local store", { source: "compare", error });
+    logger.error("Compare counters update failed", { source: "compare", error });
   }
 }
 
@@ -119,12 +120,12 @@ export async function readCounters(): Promise<CompareCounters> {
     return {
       developersCompared: (global?.comparisons ?? 0) * 2,
       reposAnalyzed: global?.reposAnalyzed ?? 0,
-      languagesTracked: global?.languages?.length ?? 0,
+      languagesTracked: global?.languagesTracked ?? 0,
       comparisonsToday: today?.comparisons ?? 0,
     };
   } catch (error) {
-    logger.warn("Compare counters read fell back to the local store", { source: "compare", error });
-    return localReadCounters();
+    logger.error("Compare counters read failed", { source: "compare", error });
+    throw error;
   }
 }
 
@@ -146,8 +147,8 @@ export async function readPairCounts(pairs: [string, string][]): Promise<Record<
     }
     return counts;
   } catch (error) {
-    logger.warn("Compare pair counts read fell back to the local store", { source: "compare", error });
-    return localReadPairCounts(pairs.map(([a, b]) => pairKey(a, b)));
+    logger.error("Compare pair counts read failed", { source: "compare", error });
+    throw error;
   }
 }
 

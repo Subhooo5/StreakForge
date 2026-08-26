@@ -17,11 +17,13 @@ export interface ArenaState {
   loading: boolean;
 }
 
-export function useArena(): ArenaState & { reload: () => void } {
-  const [state, setState] = useState<ArenaState>({ data: null, loading: true });
+export function useArena(initial?: ArenaPayload | null): ArenaState & { reload: () => void } {
+  const [state, setState] = useState<ArenaState>({ data: initial ?? null, loading: !initial });
   const [nonce, setNonce] = useState(0);
+  const seeded = useRef(Boolean(initial));
 
   useEffect(() => {
+    if (nonce === 0 && seeded.current) return;
     const controller = new AbortController();
     setState((prev) => ({ data: prev.data, loading: true }));
 
