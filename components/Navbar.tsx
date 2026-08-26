@@ -87,7 +87,6 @@ export default function Navbar({ theme, toggleTheme, active }: { theme: Theme; t
       <div style={{ background: "var(--surface)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--line2)" }}>
         <nav style={{ maxWidth: "1240px", margin: "0 auto", padding: "14px clamp(16px,4vw,40px)", display: "flex", alignItems: "center", gap: "28px" }}>
           <a href={homeHrefFor(active)} style={{ display: "flex", alignItems: "center", flex: "none" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoSrcFor(theme)} alt="StreakForge" style={{ height: "41px", width: "150px", display: "block" }} />
           </a>
 

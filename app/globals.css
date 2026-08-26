@@ -421,3 +421,14 @@ input[type=range]::-moz-range-thumb {
 @media (max-width: 560px) {
   .gen .preset-grid { grid-template-columns: 1fr !important; }
 }
+
+@media (max-width: 900px) {
+  .docs .docs-grid {
+    grid-template-columns: 1fr;
+  }
+  .docs .docs-side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}

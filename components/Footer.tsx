@@ -55,7 +55,6 @@ export default function Footer({ theme, active, docsHref = "/docs" }: { theme: T
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", gap: "30px" }}>
         <div style={{ minWidth: "180px" }}>
           <a href={homeHrefFor(active)} style={{ display: "inline-flex", alignItems: "center" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoSrcFor(theme)} alt="StreakForge" style={{ height: "52px", width: "156px", display: "block" }} />
           </a>
           <p style={{ margin: "16px 0 0", color: "var(--soft)", fontSize: "13.5px", lineHeight: 1.6, maxWidth: "240px" }}>
