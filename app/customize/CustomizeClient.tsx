@@ -33,7 +33,8 @@ export default function CustomizeClient() {
   const [username, setUsername] = useUrlBackedState('user');
   const [params, writeParams] = useUrlParams(OPTION_KEYS);
   const [radiusDraft, setRadiusDraft] = useState<number | null>(null);
-  const [colorDrafts, setColorDrafts] = useState<Partial<Pick<CustomizeOptions, 'bg' | 'accent' | 'text'>>>({});
+  const [colorText, setColorText] = useState({ bg: '', accent: '', text: '' });
+  const [colorPending, setColorPending] = useState(false);
   const [exportFmt, setExportFmt] = useState<ExportFormat>('markdown');
   const [previewBg, setPreviewBg] = useState<PreviewBg>('dark');
   const [rawView, setRawView] = useState(true);
@@ -162,11 +163,38 @@ export default function CustomizeClient() {
   const themeClass = theme === 'dark' ? 'sf customize dark' : 'sf customize';
 
   const currentYear = new Date().getFullYear();
+  const sanitizeColor = (raw: string) => (isValidHex(raw) ? cleanHex(raw).toLowerCase() : '');
+
+  const colorOverrides = useMemo(
+    () => ({ bg: sanitizeColor(colorText.bg), accent: sanitizeColor(colorText.accent), text: sanitizeColor(colorText.text) }),
+    [colorText],
+  );
+
+  const urlColors = useMemo(() => {
+    const fromUrl = fromParams({ ...params, user: username }, currentYear);
+    return { bg: fromUrl.bg, accent: fromUrl.accent, text: fromUrl.text };
+  }, [params, username, currentYear]);
+
+  useEffect(() => {
+    if (colorPending) return;
+    setColorText((current) => {
+      const next = { ...current };
+      let changed = false;
+      for (const key of ['bg', 'accent', 'text'] as const) {
+        if (sanitizeColor(current[key]) !== urlColors[key]) {
+          next[key] = urlColors[key];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [urlColors, colorPending]);
+
   const options = useMemo(() => {
     const fromUrl = fromParams({ ...params, user: username }, currentYear);
     const withRadius = radiusDraft === null ? fromUrl : { ...fromUrl, radius: radiusDraft };
-    return { ...withRadius, ...colorDrafts };
-  }, [params, username, currentYear, radiusDraft, colorDrafts]);
+    return { ...withRadius, ...colorOverrides };
+  }, [params, username, currentYear, radiusDraft, colorOverrides]);
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -186,7 +214,7 @@ export default function CustomizeClient() {
   const backgroundSwatch = effectiveColor(options.bg, preset.bg);
   const accentSwatch = effectiveColor(options.accent, preset.accent);
   const textSwatch = effectiveColor(options.text, preset.text);
-  const hasCustomColors = Boolean(options.bg || options.accent || options.text);
+  const hasCustomColors = Boolean(colorText.bg || colorText.accent || colorText.text);
   const hasUser = !!options.user;
 
   const seg = (cur: string, val: string) => ({ activeBg: cur === val ? 'var(--accent)' : 'transparent', activeColor: cur === val ? '#fff' : 'var(--soft)' });
@@ -222,18 +250,20 @@ export default function CustomizeClient() {
   };
 
   const onColorInput = (key: 'bg' | 'accent' | 'text', value: string) => {
-    const next = cleanHex(value);
-    setColorDrafts((drafts) => ({ ...drafts, [key]: next }));
+    const typed = cleanHex(value);
+    setColorText((current) => ({ ...current, [key]: typed }));
+    setColorPending(true);
     if (colorTORef.current) clearTimeout(colorTORef.current);
     colorTORef.current = setTimeout(() => {
-      setColorDrafts({});
-      applyOptions({ ...optionsRef.current, [key]: next });
+      applyOptions({ ...optionsRef.current, [key]: sanitizeColor(typed) });
+      setColorPending(false);
     }, RADIUS_COMMIT_MS);
   };
 
   const clearCustomColors = () => {
     if (colorTORef.current) clearTimeout(colorTORef.current);
-    setColorDrafts({});
+    setColorPending(false);
+    setColorText({ bg: '', accent: '', text: '' });
     applyOptions({ ...optionsRef.current, bg: '', accent: '', text: '' });
   };
 
@@ -352,9 +382,9 @@ export default function CustomizeClient() {
                 ))}
               </div>
 
-              <ColorField label="Custom Background" value={options.bg} effective={backgroundSwatch} placeholder="e.g. 0a0a0a" onChange={v => onColorInput('bg', v)} marginTop="18px" />
-              <ColorField label="Custom Accent" value={options.accent} effective={accentSwatch} placeholder="e.g. 00ffaa" onChange={v => onColorInput('accent', v)} />
-              <ColorField label="Custom Text" value={options.text} effective={textSwatch} placeholder="e.g. ffffff" onChange={v => onColorInput('text', v)} />
+              <ColorField label="Custom Background" value={colorText.bg} effective={backgroundSwatch} placeholder="e.g. 0a0a0a" onChange={v => onColorInput('bg', v)} marginTop="18px" />
+              <ColorField label="Custom Accent" value={colorText.accent} effective={accentSwatch} placeholder="e.g. 00ffaa" onChange={v => onColorInput('accent', v)} />
+              <ColorField label="Custom Text" value={colorText.text} effective={textSwatch} placeholder="e.g. ffffff" onChange={v => onColorInput('text', v)} />
 
               {hasCustomColors && (
                 <button onClick={clearCustomColors} className="ui" style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '12.5px', fontWeight: 600, color: 'var(--bad)', cursor: 'pointer', background: 'none', transition: 'opacity .16s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')} onMouseLeave={e => (e.currentTarget.style.opacity = '')}>
