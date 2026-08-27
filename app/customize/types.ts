@@ -20,6 +20,14 @@ export const EXPORT_FORMATS: { value: ExportFormat; label: string }[] = [
   { value: "action", label: "GitHub Action" },
 ];
 
+export type BgType = "solid" | "linear" | "radial";
+
+export const BG_TYPES: { value: BgType; label: string }[] = [
+  { value: "solid", label: "Solid" },
+  { value: "linear", label: "Linear" },
+  { value: "radial", label: "Radial" },
+];
+
 export const SPEEDS: LabelledOption[] = [
   { value: "4s", label: "Snappy (4s)" },
   { value: "8s", label: "Default (8s)" },
@@ -85,6 +93,10 @@ export function syncYearOptions(currentYear: number): LabelledOption[] {
 export interface CustomizeOptions {
   user: string;
   theme: string;
+  bg: string;
+  accent: string;
+  text: string;
+  bgType: BgType;
   year: string;
   speed: string;
   font: string;
@@ -101,6 +113,10 @@ export interface CustomizeOptions {
 export const DEFAULT_OPTIONS: CustomizeOptions = {
   user: "",
   theme: "dark",
+  bg: "",
+  accent: "",
+  text: "",
+  bgType: "solid",
   year: "",
   speed: "8s",
   font: "",

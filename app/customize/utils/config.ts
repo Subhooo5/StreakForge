@@ -52,6 +52,10 @@ export function parseConfig(text: string, currentYear: number): ParseResult {
   const asParams: Record<string, string> = {};
   if (typeof raw.user === "string") asParams.user = raw.user;
   if (typeof raw.theme === "string") asParams.theme = raw.theme;
+  if (typeof raw.bg === "string") asParams.bg = raw.bg;
+  if (typeof raw.accent === "string") asParams.accent = raw.accent;
+  if (typeof raw.text === "string") asParams.text = raw.text;
+  if (typeof raw.bgType === "string") asParams.bgType = raw.bgType;
   if (typeof raw.year === "string") asParams.year = raw.year;
   if (typeof raw.speed === "string") asParams.speed = raw.speed;
   if (typeof raw.font === "string") asParams.font = raw.font;

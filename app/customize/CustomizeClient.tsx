@@ -6,12 +6,13 @@ import { useUrlBackedState, useUrlParams } from "@/hooks/useUrlParams";
 import SegButton from "./components/SegButton";
 import ToggleRow from "./components/ToggleRow";
 import SelectField from "./components/SelectField";
+import ColorField from "./components/ColorField";
 import ThemeTile from "./components/ThemeTile";
 import { THEME_PRESETS, themePreset } from "./data/themes";
 import { useBadgeSvg } from "./hooks/useBadgeSvg";
-import { EXPORT_FORMATS, FONTS, LANGUAGES, PREVIEW_BGS, SIZES, SPEEDS, TIMEZONES, VIEW_MODES, syncYearOptions } from "./types";
+import { BG_TYPES, EXPORT_FORMATS, FONTS, LANGUAGES, PREVIEW_BGS, SIZES, SPEEDS, TIMEZONES, VIEW_MODES, syncYearOptions } from "./types";
 import type { CustomizeOptions, ExportFormat, PreviewBg } from "./types";
-import { PARAM_KEYS, activeParams, fromParams, toParams, toQuery } from "./utils/params";
+import { PARAM_KEYS, activeParams, cleanHex, fromParams, isValidHex, toParams, toQuery } from "./utils/params";
 import { PLACEHOLDER_USER, exportSnippet } from "./utils/snippets";
 import { downloadConfig, parseConfig } from "./utils/config";
 import Navbar from "@/components/Navbar";
@@ -32,6 +33,7 @@ export default function CustomizeClient() {
   const [username, setUsername] = useUrlBackedState('user');
   const [params, writeParams] = useUrlParams(OPTION_KEYS);
   const [radiusDraft, setRadiusDraft] = useState<number | null>(null);
+  const [colorDrafts, setColorDrafts] = useState<Partial<Pick<CustomizeOptions, 'bg' | 'accent' | 'text'>>>({});
   const [exportFmt, setExportFmt] = useState<ExportFormat>('markdown');
   const [previewBg, setPreviewBg] = useState<PreviewBg>('dark');
   const [rawView, setRawView] = useState(true);
@@ -47,6 +49,7 @@ export default function CustomizeClient() {
   const copyTORef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const svgTORef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const radiusTORef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const colorTORef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const reduceRef = useRef(false);
 
@@ -148,6 +151,7 @@ export default function CustomizeClient() {
       if (copyTORef.current) clearTimeout(copyTORef.current);
       if (svgTORef.current) clearTimeout(svgTORef.current);
       if (radiusTORef.current) clearTimeout(radiusTORef.current);
+      if (colorTORef.current) clearTimeout(colorTORef.current);
     };
   }, [initReveal]);
 
@@ -160,8 +164,12 @@ export default function CustomizeClient() {
   const currentYear = new Date().getFullYear();
   const options = useMemo(() => {
     const fromUrl = fromParams({ ...params, user: username }, currentYear);
-    return radiusDraft === null ? fromUrl : { ...fromUrl, radius: radiusDraft };
-  }, [params, username, currentYear, radiusDraft]);
+    const withRadius = radiusDraft === null ? fromUrl : { ...fromUrl, radius: radiusDraft };
+    return { ...withRadius, ...colorDrafts };
+  }, [params, username, currentYear, radiusDraft, colorDrafts]);
+
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const applyOptions = useCallback((next: CustomizeOptions) => {
     const written = toParams(next);
@@ -174,6 +182,11 @@ export default function CustomizeClient() {
   }, [applyOptions, options]);
 
   const preset = themePreset(options.theme);
+  const effectiveColor = (override: string, fallback: string) => (isValidHex(override) ? `#${cleanHex(override)}` : fallback);
+  const backgroundSwatch = effectiveColor(options.bg, preset.bg);
+  const accentSwatch = effectiveColor(options.accent, preset.accent);
+  const textSwatch = effectiveColor(options.text, preset.text);
+  const hasCustomColors = Boolean(options.bg || options.accent || options.text);
   const hasUser = !!options.user;
 
   const seg = (cur: string, val: string) => ({ activeBg: cur === val ? 'var(--accent)' : 'transparent', activeColor: cur === val ? '#fff' : 'var(--soft)' });
@@ -206,6 +219,22 @@ export default function CustomizeClient() {
       setRadiusDraft(null);
       applyOptions({ ...options, radius: value });
     }, RADIUS_COMMIT_MS);
+  };
+
+  const onColorInput = (key: 'bg' | 'accent' | 'text', value: string) => {
+    const next = cleanHex(value);
+    setColorDrafts((drafts) => ({ ...drafts, [key]: next }));
+    if (colorTORef.current) clearTimeout(colorTORef.current);
+    colorTORef.current = setTimeout(() => {
+      setColorDrafts({});
+      applyOptions({ ...optionsRef.current, [key]: next });
+    }, RADIUS_COMMIT_MS);
+  };
+
+  const clearCustomColors = () => {
+    if (colorTORef.current) clearTimeout(colorTORef.current);
+    setColorDrafts({});
+    applyOptions({ ...optionsRef.current, bg: '', accent: '', text: '' });
   };
 
   const onShuffle = () => {
@@ -313,6 +342,26 @@ export default function CustomizeClient() {
                   <span className="mono" style={{ fontSize: '10px', color: 'var(--faint)', marginLeft: '3px' }}>bg·accent·text</span>
                 </span>
               </div>
+
+              <div style={{ height: '1px', background: 'var(--line2)', margin: '24px 0' }}></div>
+              <div className="ui" style={{ fontSize: '11px', letterSpacing: '.08em', color: 'var(--soft)', textTransform: 'uppercase', fontWeight: 600 }}>Custom Color Overrides</div>
+              <p className="ui" style={{ margin: '8px 0 14px', fontSize: '12px', color: 'var(--faint)', lineHeight: 1.5 }}>These override the theme preset above. Enter HEX values without #.</p>
+              <div className="ui" style={{ display: 'flex', gap: '6px', padding: '4px', border: '1px solid var(--line)', borderRadius: '12px', background: 'var(--surface2)' }}>
+                {BG_TYPES.map(m => (
+                  <SegButton key={m.value} label={m.label} {...seg(options.bgType, m.value)} onClick={() => setOption('bgType', m.value)} fontSize="13px" padding="9px" />
+                ))}
+              </div>
+
+              <ColorField label="Custom Background" value={options.bg} effective={backgroundSwatch} placeholder="e.g. 0a0a0a" onChange={v => onColorInput('bg', v)} marginTop="18px" />
+              <ColorField label="Custom Accent" value={options.accent} effective={accentSwatch} placeholder="e.g. 00ffaa" onChange={v => onColorInput('accent', v)} />
+              <ColorField label="Custom Text" value={options.text} effective={textSwatch} placeholder="e.g. ffffff" onChange={v => onColorInput('text', v)} />
+
+              {hasCustomColors && (
+                <button onClick={clearCustomColors} className="ui" style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '12.5px', fontWeight: 600, color: 'var(--bad)', cursor: 'pointer', background: 'none', transition: 'opacity .16s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')} onMouseLeave={e => (e.currentTarget.style.opacity = '')}>
+                  <svg width={13} height={13} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+                  Clear Custom Colours
+                </button>
+              )}
 
               <div className="ui" style={{ fontSize: '11px', letterSpacing: '.08em', color: 'var(--soft)', textTransform: 'uppercase', fontWeight: 600, margin: '26px 0 10px' }}>Sync Year</div>
               <SelectField value={options.year} onChange={v => setOption('year', v)}>
