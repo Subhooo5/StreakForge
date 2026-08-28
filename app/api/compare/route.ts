@@ -63,6 +63,14 @@ export async function GET(request: Request) {
     const a = resultA.value;
     const b = resultB.value;
 
+    const payload: CompareBattlePayload = { user1: a, user2: b };
+    const body = JSON.stringify(payload);
+    const etag = `W/"${crypto.createHash("sha1").update(body).digest("hex")}"`;
+
+    if ((request.headers.get("if-none-match") ?? "").split(",").some((e) => e.trim() === etag)) {
+      return new NextResponse(null, { status: 304, headers: { ETag: etag, "X-Request-ID": requestId } });
+    }
+
     after(() =>
       recordComparison({
         userA: a.profile.username,
@@ -71,14 +79,6 @@ export async function GET(request: Request) {
         languages: [...a.languages.map((l) => l.name), ...b.languages.map((l) => l.name)],
       }),
     );
-
-    const payload: CompareBattlePayload = { user1: a, user2: b };
-    const body = JSON.stringify(payload);
-    const etag = `W/"${crypto.createHash("sha1").update(body).digest("hex")}"`;
-
-    if ((request.headers.get("if-none-match") ?? "").split(",").some((e) => e.trim() === etag)) {
-      return new NextResponse(null, { status: 304, headers: { ETag: etag, "X-Request-ID": requestId } });
-    }
 
     logger.info("Compare request completed", {
       source: "compare",
