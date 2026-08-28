@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ArenaPayload, CompareBattlePayload } from "@/types/compare";
 
-async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+export const COMPARE_RECORD_HEADER = "x-sf-record";
+
+async function getJson<T>(url: string, signal?: AbortSignal, record = false): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (record) headers[COMPARE_RECORD_HEADER] = "1";
+  const res = await fetch(url, { signal, cache: record ? "no-store" : "default", headers });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(body?.error || `Request failed (${res.status})`);
@@ -50,7 +54,7 @@ export interface BattleState {
 const IDLE: BattleState = { data: null, loading: false, error: null };
 
 export interface Battle extends BattleState {
-  run: (userA: string, userB: string) => Promise<void>;
+  run: (userA: string, userB: string, record?: boolean) => Promise<void>;
   prefetch: (userA: string, userB: string) => void;
   reset: () => void;
 }
@@ -59,13 +63,15 @@ const battleCache = new Map<string, Promise<CompareBattlePayload>>();
 
 const cacheKey = (a: string, b: string) => `${a.toLowerCase()}|${b.toLowerCase()}`;
 
-function loadBattle(a: string, b: string): Promise<CompareBattlePayload> {
+function loadBattle(a: string, b: string, record = false): Promise<CompareBattlePayload> {
   const key = cacheKey(a, b);
-  const cached = battleCache.get(key);
-  if (cached) return cached;
+  if (!record) {
+    const cached = battleCache.get(key);
+    if (cached) return cached;
+  }
 
   const query = `user1=${encodeURIComponent(a)}&user2=${encodeURIComponent(b)}`;
-  const promise = getJson<CompareBattlePayload>(`/api/compare?${query}`).catch((err: unknown) => {
+  const promise = getJson<CompareBattlePayload>(`/api/compare?${query}`, undefined, record).catch((err: unknown) => {
     battleCache.delete(key);
     throw err;
   });
@@ -95,7 +101,7 @@ export function useBattle(onComplete?: () => void): Battle {
   const completeRef = useRef(onComplete);
   completeRef.current = onComplete;
 
-  const run = useCallback(async (userA: string, userB: string) => {
+  const run = useCallback(async (userA: string, userB: string, record = false) => {
     const a = userA.trim();
     const b = userB.trim();
     if (!a || !b) {
@@ -109,7 +115,7 @@ export function useBattle(onComplete?: () => void): Battle {
     setState((prev) => ({ data: prev.data, loading: true, error: null }));
 
     try {
-      const data = await loadBattle(a, b);
+      const data = await loadBattle(a, b, record);
       if (currentRef.current !== key) return;
       setState({ data, loading: false, error: null });
       completeRef.current?.();

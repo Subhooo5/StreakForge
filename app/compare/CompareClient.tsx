@@ -410,6 +410,7 @@ export default function CompareClient({ initialArena }: { initialArena?: ArenaPa
   const urlUserA = urlParams.user1 ?? "";
   const urlUserB = urlParams.user2 ?? "";
   const lastRunRef = useRef<string | null>(null);
+  const compareIntentRef = useRef<string | null>(null);
   const battleRunRef = useRef(battle.run);
   battleRunRef.current = battle.run;
   const battleResetRef = useRef(battle.reset);
@@ -427,9 +428,11 @@ export default function CompareClient({ initialArena }: { initialArena?: ArenaPa
     const key = `${urlUserA.toLowerCase()}|${urlUserB.toLowerCase()}`;
     if (lastRunRef.current === key) return;
     lastRunRef.current = key;
+    const initiated = compareIntentRef.current === key;
+    compareIntentRef.current = null;
     setUserA(urlUserA);
     setUserB(urlUserB);
-    void battleRunRef.current(urlUserA, urlUserB);
+    void battleRunRef.current(urlUserA, urlUserB, initiated);
   }, [urlUserA, urlUserB]);
 
   const compared = battle.data !== null || (battle.loading && !!urlUserA && !!urlUserB);
@@ -560,6 +563,7 @@ export default function CompareClient({ initialArena }: { initialArena?: ArenaPa
       void battle.run(nextA, nextB);
       return;
     }
+    compareIntentRef.current = `${nextA.toLowerCase()}|${nextB.toLowerCase()}`;
     writeUrl({ user1: nextA, user2: nextB }, "push");
   };
   const onCompare = () => doCompare(userA, userB);

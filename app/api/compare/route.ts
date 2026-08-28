@@ -71,14 +71,16 @@ export async function GET(request: Request) {
       return new NextResponse(null, { status: 304, headers: { ETag: etag, "X-Request-ID": requestId } });
     }
 
-    after(() =>
-      recordComparison({
-        userA: a.profile.username,
-        userB: b.profile.username,
-        reposAnalyzed: a.profile.stats.repositories + b.profile.stats.repositories,
-        languages: [...a.languages.map((l) => l.name), ...b.languages.map((l) => l.name)],
-      }),
-    );
+    if (request.headers.get("x-sf-record") === "1") {
+      after(() =>
+        recordComparison({
+          userA: a.profile.username,
+          userB: b.profile.username,
+          reposAnalyzed: a.profile.stats.repositories + b.profile.stats.repositories,
+          languages: [...a.languages.map((l) => l.name), ...b.languages.map((l) => l.name)],
+        }),
+      );
+    }
 
     logger.info("Compare request completed", {
       source: "compare",
