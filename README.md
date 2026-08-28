@@ -2,7 +2,6 @@
 
 <img src="public/streakforge-logo-dark.svg" alt="StreakForge" width="360" />
 
-# StreakForge
 
 *Your GitHub contribution history — forged into a live 3D isometric monolith.*
 
@@ -16,7 +15,7 @@
 
 ---
 
-## Live Demo
+## 🔴 Live Demo
 
 <div align="center">
 
@@ -194,27 +193,27 @@ Every parameter below is parsed by `streakParamsSchema` and reaches the SVG gene
 
 ---
 
-## Features
+## 🚀 Features
 
-### Generator
+### -> Generator
 
 Builds a complete profile README around your badge — presets, tech stack, contribution visualisations, repository spotlight and socials — with a live preview and a copyable Markdown output.
 
 Reads your public profile, repositories and top languages from the GitHub API, assembles the Markdown client-side as you edit, and renders the badge preview from the same `/api/streak` endpoint the final README embeds, so the preview is the real artifact rather than a mock.
 
-### Compare
+### -> Compare
 
 Puts two GitHub accounts head to head on contributions, streaks, languages and repository reach, with a winner banner and a shareable `?user1=&user2=` URL.
 
 Fetches both profiles in parallel, scores them across weighted axes, and derives a radar and activity heatmap from the contribution calendars. Global counters for developers compared, repos analysed, languages tracked and comparisons today persist in MongoDB, keyed by the IST calendar date so the daily figure rolls over at 00:00 IST.
 
-### Burnout Radar
+### -> Burnout Radar
 
 Reads a repository's commit rhythm for signs of unsustainable pace and key-person risk, reporting a sustainability score alongside bus factor, contributor concentration and night/weekend share.
 
 Walks the repository's commit history, buckets commits by weekday and hour to find after-hours and weekend load, computes contributor concentration for the bus factor, and pairs the heuristic findings with generated recommendations. A bot filter drops automation accounts before scoring.
 
-### Customization Studio
+### -> Customization Studio
 
 Tunes every badge parameter against a live preview — 33 theme presets, custom colour overrides, layout, typography, visibility and language — then hands back the embed snippet in Markdown, HTML, React TSX or a GitHub Action.
 
@@ -222,6 +221,6 @@ Every control maps to a query parameter on `/api/streak`, so the studio's state,
 
 ---
 
-## License
+## 📝 License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
