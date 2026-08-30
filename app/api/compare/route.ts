@@ -9,6 +9,7 @@ import { refreshRateLimiter } from "@/services/github/refresh-rate-limiter";
 import { getClientIp } from "@/utils/getClientIp";
 import { dashboardErrorResponse } from "../dashboard/shared";
 import { recordComparison } from "./counters";
+import { invalidateArenaPayload } from "./arena/payload";
 import { fetchCompareUser } from "./fetch-user";
 import type { CompareBattlePayload } from "@/types/compare";
 
@@ -72,14 +73,15 @@ export async function GET(request: Request) {
     }
 
     if (request.headers.get("x-sf-record") === "1") {
-      after(() =>
-        recordComparison({
+      after(async () => {
+        await recordComparison({
           userA: a.profile.username,
           userB: b.profile.username,
           reposAnalyzed: a.profile.stats.repositories + b.profile.stats.repositories,
           languages: [...a.languages.map((l) => l.name), ...b.languages.map((l) => l.name)],
-        }),
-      );
+        });
+        await invalidateArenaPayload();
+      });
     }
 
     logger.info("Compare request completed", {

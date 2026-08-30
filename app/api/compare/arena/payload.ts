@@ -29,6 +29,23 @@ const HOT_CARDS = 3;
 const ARENA_TTL_MS = 30 * 60 * 1000;
 const arenaCache = new DistributedCache<RosterEntry[]>(8);
 
+const PAYLOAD_TTL_MS = 60 * 1000;
+const PAYLOAD_KEY = `compare:arena:payload:${process.env.VERCEL_ENV || process.env.NODE_ENV || "development"}`;
+const payloadCache = new DistributedCache<ArenaPayload>(4);
+
+export async function readArenaPayload(): Promise<ArenaPayload> {
+  const cached = await payloadCache.get(PAYLOAD_KEY, PAYLOAD_TTL_MS);
+  if (cached) return cached;
+
+  const payload = await buildArenaPayload();
+  await payloadCache.set(PAYLOAD_KEY, payload, PAYLOAD_TTL_MS);
+  return payload;
+}
+
+export async function invalidateArenaPayload(): Promise<void> {
+  await payloadCache.delete(PAYLOAD_KEY);
+}
+
 interface RosterEntry {
   login: string;
   name: string;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import CompareClient from "./CompareClient";
-import { buildArenaPayload } from "@/app/api/compare/arena/payload";
+import { readArenaPayload } from "@/app/api/compare/arena/payload";
 
 const BASE_TITLE = "Compare — StreakForge";
 const BASE_DESCRIPTION = "Compare GitHub contribution streaks side by side.";
@@ -26,6 +26,6 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 }
 
 export default async function Page() {
-  const initialArena = await buildArenaPayload().catch(() => null);
+  const initialArena = await readArenaPayload().catch(() => null);
   return <CompareClient initialArena={initialArena} />;
 }

@@ -11,28 +11,79 @@
 [![GraphQL](https://img.shields.io/badge/GraphQL-API-E10098?style=flat&logo=graphql&logoColor=white)](https://docs.github.com/en/graphql)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat)](LICENSE)
 
+---
+
+![Streakforge Live Demo](https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=cyberpunk)
+
+```md
+![Streakforge](https://streakforge-one.vercel.app/api/streak?user=YOUR_USERNAME)
+```
+
 </div>
 
 ---
 
 ## 🔴 Live Demo
 
-<div align="center">
+Transform your GitHub contribution history into a cinematic 3D monolith.
 
-[![StreakForge badge preview](https://STREAKFORGE_URL/api/streak?user=Subhooo5&theme=cyberpunk_neon)](https://STREAKFORGE_URL)
+### ✨ Theme Showcase
 
-</div>
+<table align="center">
+<tr>
+
+<td align="center">
+
+#### Default
+
+<a href="https://streakforge-one.vercel.app/api/streak?user=Subhooo5">
+  <img 
+    src="https://streakforge-one.vercel.app/api/streak?user=Subhooo5" 
+    width="600"
+  />
+</a>
+
+</td>
+
+<td align="center">
+
+#### Neon
+
+<a href="https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=neon">
+  <img 
+    src="https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=neon" 
+    width="600"
+  />
+</a>
+
+</td>
+
+<td align="center">
+
+#### Custom
+
+<a href="https://streakforge-one.vercel.app/api/streak?user=Subhooo5&bg=0a0a0a&accent=ff6b35&text=ffffff">
+  <img 
+    src="https://streakforge-one.vercel.app/api/streak?user=Subhooo5&bg=0a0a0a&accent=ff6b35&text=ffffff" 
+    width="600"
+  />
+</a>
+
+</td>
+
+</tr>
+</table>
 
 ### Theme Showcase
 
 | Theme | Preview |
 | --- | --- |
-| **Cyberpunk Neon** | [`/api/streak?user=Subhooo5&theme=cyberpunk_neon`](https://STREAKFORGE_URL/api/streak?user=Subhooo5&theme=cyberpunk_neon) |
-| **Synthwave** | [`/api/streak?user=Subhooo5&theme=synthwave`](https://STREAKFORGE_URL/api/streak?user=Subhooo5&theme=synthwave) |
-| **Dracula** | [`/api/streak?user=Subhooo5&theme=dracula`](https://STREAKFORGE_URL/api/streak?user=Subhooo5&theme=dracula) |
-| **Tokyo Night** | [`/api/streak?user=Subhooo5&theme=tokyo_night`](https://STREAKFORGE_URL/api/streak?user=Subhooo5&theme=tokyo_night) |
-| **Retro Terminal** | [`/api/streak?user=Subhooo5&theme=retro-terminal`](https://STREAKFORGE_URL/api/streak?user=Subhooo5&theme=retro-terminal) |
-| **Glacier** | [`/api/streak?user=Subhooo5&theme=glacier`](https://STREAKFORGE_URL/api/streak?user=Subhooo5&theme=glacier) |
+| **Cyberpunk Neon** | [`/api/streak?user=Subhooo5&theme=cyberpunk_neon`](https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=cyberpunk_neon) |
+| **Synthwave** | [`/api/streak?user=Subhooo5&theme=synthwave`](https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=synthwave) |
+| **Dracula** | [`/api/streak?user=Subhooo5&theme=dracula`](https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=dracula) |
+| **Tokyo Night** | [`/api/streak?user=Subhooo5&theme=tokyo_night`](https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=tokyo_night) |
+| **Retro Terminal** | [`/api/streak?user=Subhooo5&theme=retro-terminal`](https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=retro-terminal) |
+| **Glacier** | [`/api/streak?user=Subhooo5&theme=glacier`](https://streakforge-one.vercel.app/api/streak?user=Subhooo5&theme=glacier) |
 
 ---
 
@@ -41,19 +92,19 @@
 Default badge:
 
 ```markdown
-![StreakForge](https://STREAKFORGE_URL/api/streak?user=your-handle)
+![StreakForge](https://streakforge-one.vercel.app/api/streak?user=your-handle)
 ```
 
 Cyberpunk Neon, large, with a punch-card layout:
 
 ```markdown
-![StreakForge](https://STREAKFORGE_URL/api/streak?user=your-handle&theme=cyberpunk_neon&size=large&view=punchcard)
+![StreakForge](https://streakforge-one.vercel.app/api/streak?user=your-handle&theme=cyberpunk_neon&size=large&view=punchcard)
 ```
 
 Custom colours overriding the preset:
 
 ```markdown
-![StreakForge](https://STREAKFORGE_URL/api/streak?user=your-handle&bg=0a0a0a&accent=00ffaa&text=ffffff)
+![StreakForge](https://streakforge-one.vercel.app/api/streak?user=your-handle&bg=0a0a0a&accent=00ffaa&text=ffffff)
 ```
 
 ---
@@ -195,25 +246,25 @@ Every parameter below is parsed by `streakParamsSchema` and reaches the SVG gene
 
 ## 🚀 Features
 
-### -> Generator
+### ▸ Generator
 
 Builds a complete profile README around your badge — presets, tech stack, contribution visualisations, repository spotlight and socials — with a live preview and a copyable Markdown output.
 
 Reads your public profile, repositories and top languages from the GitHub API, assembles the Markdown client-side as you edit, and renders the badge preview from the same `/api/streak` endpoint the final README embeds, so the preview is the real artifact rather than a mock.
 
-### -> Compare
+### ▸ Compare
 
 Puts two GitHub accounts head to head on contributions, streaks, languages and repository reach, with a winner banner and a shareable `?user1=&user2=` URL.
 
 Fetches both profiles in parallel, scores them across weighted axes, and derives a radar and activity heatmap from the contribution calendars. Global counters for developers compared, repos analysed, languages tracked and comparisons today persist in MongoDB, keyed by the IST calendar date so the daily figure rolls over at 00:00 IST.
 
-### -> Burnout Radar
+### ▸ Burnout Radar
 
 Reads a repository's commit rhythm for signs of unsustainable pace and key-person risk, reporting a sustainability score alongside bus factor, contributor concentration and night/weekend share.
 
 Walks the repository's commit history, buckets commits by weekday and hour to find after-hours and weekend load, computes contributor concentration for the bus factor, and pairs the heuristic findings with generated recommendations. A bot filter drops automation accounts before scoring.
 
-### -> Customization Studio
+### ▸ Customization Studio
 
 Tunes every badge parameter against a live preview — 33 theme presets, custom colour overrides, layout, typography, visibility and language — then hands back the embed snippet in Markdown, HTML, React TSX or a GitHub Action.
 
